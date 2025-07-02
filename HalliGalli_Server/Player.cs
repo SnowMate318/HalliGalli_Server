@@ -20,9 +20,21 @@ namespace HalliGalli_Server
         public StreamReader reader;
         public StreamWriter writer;
 
-        public void ReceiveUserInfo() { }
-        public void ReceiveJson() { }
-        public void PlayCard() { }
-        public void RingBell() { }
+        public void ReceiveUserInfo()
+        {
+            // 쓰레드를 실행하여 유저정보를 수신함
+        }
+        public void ReceiveJson()
+        {
+            // 사용자로부터 정보를 받음
+        }
+        public void PlayCard()
+        {
+            // Json으로 받은 정보가 카드 내기일 경우
+        }
+        public void RingBell()
+        {
+            // Json으로 받은 정보가 종 울리기일 경우
+        }
     }
 }
