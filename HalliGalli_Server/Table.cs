@@ -78,5 +78,10 @@ namespace HalliGalli_Server
 
             return -1;
         }
+
+        public void AddPlayer(Player player)
+        {
+            this.players.Add(player);
+        }
     }
 }

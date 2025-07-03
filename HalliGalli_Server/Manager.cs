@@ -19,7 +19,6 @@ namespace HalliGalli_Server
 
         private Manager() {
 
-            //ip 어드레스와 포트번호 필요
             server = new TcpListener(IPAddress.Any, 1234);
 
             Console.WriteLine("서버 시작");
@@ -53,14 +52,22 @@ namespace HalliGalli_Server
                 }
                 catch (IOException ex) {
 
-                    RemoveUser(1); // Todo: 아이디 확인 후 제거 요청 브로드캐스팅
+                    RemoveUser(1); // Todo: 아이디 확인 후 제거 요청 브로드캐스팅 (어케하지..)
                     continue;
                 
                 }
             }
         }
         public void AddUser(object obj) {
-            //Todo: 
+            TcpClient Client = (TcpClient)obj;
+            NetworkStream stream = Client.GetStream();
+            Player player = new Player(currentThreadCount, stream, Client); //currentcount로 하는이유 어짜피 나갔다 다시 들어왔을때는 게임진행이 안됨
+            Table.Instance.AddPlayer(player);
+            while (true) {
+            
+                
+            
+            }
             
         }
         public bool CheckUserAvailable() {
@@ -70,7 +77,7 @@ namespace HalliGalli_Server
         public void RemoveUser(int playerId) {
 
             currentThreadCount--;
-
+            Table.Instance.PlayerDeath(playerId);
 
         }
 

@@ -12,13 +12,24 @@ namespace HalliGalli_Server
     {
         public CardDeck deck = new();
         public int playerId;
-        public string username;
+        public string username = "없음";
         public bool isAlive = true;
         public bool isTurn = false;
 
         public TcpClient tcpClient;
         public StreamReader reader;
         public StreamWriter writer;
+
+        public Player(int id, NetworkStream stream, TcpClient client)
+        {
+            this.playerId = id;
+            this.reader = new StreamReader(stream);
+            this.writer = new StreamWriter(stream); 
+            this.tcpClient = client;
+
+            //Todo: 유저이름 입력받기
+
+        }
 
         public void ReceiveUserInfo()
         {
@@ -36,5 +47,15 @@ namespace HalliGalli_Server
         {
             // Json으로 받은 정보가 종 울리기일 경우
         }
+
+        // 수정된 BroadcastToAll 메서드
+        public static void BroadcastToAll(Message message)
+        {
+            foreach (Player player in Table.Instance.players)
+            {
+                Broadcaster.Instance.SendJson(message, player.tcpClient.GetStream());
+            }
+        }
     }
+
 }

@@ -11,22 +11,44 @@ namespace HalliGalli_Server
 {
     // 브로드캐스터
 
-    internal class Message1 {
-        public int playerId;
-        public string message;
-    
-    }
-    internal class Message2 { 
+    public class Message
+    {
         public int playerId;
         public bool isTurnActive;
         public Card Card;
         public int userState;
         public Card[] openCards;
-    
+
+        public Message() // 테스트데이터 (디폴트값)
+        {
+            playerId = 0;
+            isTurnActive = false;
+            Card = new Card();
+            userState = 0;
+            openCards = new Card[2];
+            openCards[0] = new Card();
+            openCards[1] = new Card();
+        }
+
+        public Message(int playerId, bool isTurnActivate, Card card, int userState, Card[] openCards)
+        {
+            this.playerId = playerId;
+            this.isTurnActive = isTurnActivate;
+            this.Card = card;
+            this.userState = userState;
+            this.openCards = openCards;
+        }
+    }
+
+    public class Message2
+    {
+        public int playerId;
+        public required string message;
     }
 
     public class Broadcaster
     {
+        public static Broadcaster Instance { get; } = new Broadcaster();
 
         public void SendJson<T>(T obj, NetworkStream stream)
         {
@@ -38,30 +60,6 @@ namespace HalliGalli_Server
             stream.Write(data, 0, data.Length);  // 실제 데이터 전송
             stream.Flush();
         }
-
-
-        //public void SendJson(int playerId, string message) { }
-
-        //public void SendJson(int playerId, bool isTurnActive, Card card, int userState, Card[] openedCards) { }
-        
-        //public T ReceiveJson<T>()
-        //{
-        //    byte[] lengthBytes = new byte[4];
-        //    stream.Read(lengthBytes, 0, 4);  // 길이 읽기
-        //    int length = BitConverter.ToInt32(lengthBytes, 0);
-
-        //    byte[] data = new byte[length];
-        //    int readBytes = 0;
-        //    while (readBytes < length)
-        //    {
-        //        int r = stream.Read(data, readBytes, length - readBytes);
-        //        if (r == 0) throw new IOException("Disconnected");
-        //        readBytes += r;
-        //    }
-
-        //    string json = Encoding.UTF8.GetString(data);
-        //    return JsonSerializer.Deserialize<T>(json);
-        //}
 
     }
 }
