@@ -6,15 +6,16 @@ using System.Threading.Tasks;
 
 namespace HalliGalli_Server
 {
-    public class Message
+    public class MessageServerToCli
     {
-        public int playerId;
-        public bool isTurnActive;
-        public Card Card;
-        public int userState;
-        public Card[] openCards;
+        public int? playerId;
+        public string playerName;
+        public bool? isTurnActive;
+        public Card? Card;
+        public int? userState;
+        public Card[]? openCards;
 
-        public Message() // 테스트데이터 (디폴트값)
+        public MessageServerToCli() // 테스트데이터 (디폴트값)
         {
             playerId = 0;
             isTurnActive = false;
@@ -25,9 +26,24 @@ namespace HalliGalli_Server
             openCards[1] = new Card("서버로 잘 전달됨", 200);
         }
 
-        public Message(int playerId, bool isTurnActivate, Card card, int userState, Card[] openCards)
+        public MessageServerToCli(int state) // 테스트데이터 (디폴트값)
+        {
+            this.userState = state;
+        }
+
+
+
+        public MessageServerToCli(int playerId, string playerName, int userState)
         {
             this.playerId = playerId;
+            this.playerName = playerName;
+            this.userState = userState;
+        }
+
+        public MessageServerToCli(int playerId, string playerName, bool isTurnActivate, Card card, int userState, Card[] openCards)
+        {
+            this.playerId = playerId;
+            this.playerName = playerName;
             this.isTurnActive = isTurnActivate;
             this.Card = card;
             this.userState = userState;
@@ -38,29 +54,29 @@ namespace HalliGalli_Server
     public class MessageCliToServer
     {
         public int playerId;
+        public string playerName;
         public string key;
-        public DateTime? timestamp;
-        public bool penalty;
+        public int? timestamp;
 
         public MessageCliToServer()
         {
             this.playerId = 0;
+            this.playerName = "";
             this.key = "";
-            this.timestamp = DateTime.Now;
-            this.penalty = false;
+            this.timestamp = 0;
         }
-        public MessageCliToServer(int playerId, string key, bool penalty)
+        public MessageCliToServer(int playerId, string playerName, string key)
         {
             this.playerId = playerId;
+            this.playerName = playerName;
             this.key = key;
-            this.penalty = penalty;
         }
-        public MessageCliToServer(int playerId, string key, DateTime timestamp, bool penalty)
+        public MessageCliToServer(int playerId, string playerName, string key, int timestamp)
         {
             this.playerId = playerId;
+            this.playerName = playerName;
             this.key = key;
             this.timestamp = timestamp;
-            this.penalty = penalty;
         }
 
     }

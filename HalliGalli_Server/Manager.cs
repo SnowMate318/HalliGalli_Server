@@ -10,6 +10,11 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
+//1. 승리, 2.패배, 3.패널티 4.입장  5.퇴장 6.이름 중복 7.게임시작 
+
+
+
+
 namespace HalliGalli_Server
 {
     // 관리 클래스 (싱글톤)
@@ -20,6 +25,8 @@ namespace HalliGalli_Server
         private int currentThreadCount = 0;
         TcpListener server;
         bool gamestart = false;
+
+        bool[] idBox = {false,false,false,false};
 
         private Manager()
         {
@@ -48,7 +55,7 @@ namespace HalliGalli_Server
                 TcpClient client = server.AcceptTcpClient();
                 if (client != null && CheckUserAvailable())
                 {
-                    Thread ClientThread = new Thread(new ParameterizedThreadStart(UserTCPStert));
+                    Thread ClientThread = new Thread(new ParameterizedThreadStart(UserTCPStart));
                     lock (threadLock)
                     {
                         currentThreadCount++;
@@ -58,18 +65,44 @@ namespace HalliGalli_Server
                 }
             }
         }
-        public void UserTCPStert(object obj) // 유저 추가시 
+        public void UserTCPStart(object obj) // 유저 추가시 
         {
             TcpClient Client = (TcpClient)obj;
             NetworkStream stream = Client.GetStream();
-            Player player = new Player(currentThreadCount, stream, Client); //currentcount로 하는이유 어짜피 나갔다 다시 들어왔을때는 게임진행이 안됨
-            Table.Instance.AddPlayer(player);
+
+            int playerid = 0;
+            for(int i = 0; i < 4; i++)
+            {
+                if (!idBox[i])
+                {
+                    lock (threadLock) {
+                        idBox[i] = true;
+                    }
+                    playerid = i;
+                    break;
+                }
+            }
+
+            Player player = new Player(playerid, stream, Client); 
+            MessageCliToServer msg = player.ReceiveJson<MessageCliToServer>();
+
+            if (msg!=null)
+            {
+                if (Table.Instance.players[msg.playerName] != null)
+                {
+
+                    throw new Exception("이름 중복");
+                }
+                player.username = msg.playerName;
+            }
+
+            Table.Instance.AddPlayer(player); // 수정
 
             try
             {
                 while (true)
                 {
-                    MessageCliToServer msg = player.ReceiveJson<MessageCliToServer>();
+                    msg = player.ReceiveJson<MessageCliToServer>();
                     if (msg != null) {
 
                         if(!gamestart && msg.key == "p")
@@ -78,16 +111,14 @@ namespace HalliGalli_Server
                             continue;
                         }
 
-
-
-                        // todo:
-                        // 메세지를 받았을때 로직을 처리
-                        // 상태 기준 판단
-                        // 상대가 누른 키를 기준으로 판단
+                        if (!gamestart) continue;
+                        player.ReceiveUserInfo(msg);// 메세지를 받았을때 로직을 처리
+                                                    // 상태 기준 판단
+                                                    // 상대가 누른 키를 기준으로 판단
 
 
                         // 테스트(쓰레기값 주기)
-                        Broadcaster.Instance.BroadcastToAll(new Message());
+                        // Broadcaster.Instance.BroadcastToAll(new MessageServerToCli());
                     }
 
 
@@ -96,6 +127,14 @@ namespace HalliGalli_Server
             catch (IOException)
             {
                 Console.WriteLine($"{player.playerId} 연결 종료");
+                Broadcaster.Instance.BroadcastToAll(new MessageServerToCli(player.playerId, player.username, 5)); // 5 -> 퇴장
+            }
+            catch (Exception e)
+            {
+                if(e.Message=="이름 중복")
+                {
+                    Broadcaster.Instance.BroadcastToAll(new MessageServerToCli(6)); // 6 -> 이름 중복
+                }
             }
             finally
             {
@@ -116,11 +155,12 @@ namespace HalliGalli_Server
 
             lock (threadLock)
             {
+                idBox[player.playerId] = false;
                 currentThreadCount--;
             }
 
             Table.Instance.PlayerDeath(player.playerId);
-            //Todo: Table.Instance.deletePlayer(player.playerId);
+            Table.Instance.players.Remove(player.username);
             player.stream.Close();
             player.tcpClient.Close();
         }

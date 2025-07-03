@@ -37,13 +37,13 @@ namespace HalliGalli_Server
         }
 
         // 수정된 BroadcastToAll 메서드
-        public void BroadcastToAll(Message message)
+        public void BroadcastToAll(MessageServerToCli message)
         {
-            foreach (Player player in Table.Instance.players)
+            foreach (var kvp in Table.Instance.players)
             {
+                Player player = kvp.Value; // KeyValuePair에서 Player 객체를 가져옴
                 SendJson(message, player.tcpClient.GetStream());
             }
         }
-
     }
 }

@@ -40,7 +40,7 @@ namespace HalliGalli_Server
             switch (msg.key)
             {
                 case "k":
-                    PlayCard();
+                    PlayCard(msg);
                     break;
                 case " ":
                     RingBell(msg);
@@ -48,21 +48,23 @@ namespace HalliGalli_Server
             }
         }
 
-        private void PlayCard()
+        private void PlayCard(MessageCliToServer msg)
         {
             // Json으로 받은 정보가 카드 내기일 경우
             if (!isTurn)
             {
                 return;
             }
-            Table.Instance.PlayCard(playerId); // 테이블에서 카드 내기 로직 호출
+            Table.Instance.PlayCard(msg.playerName); // 테이블에서 카드 내기 로직 호출
         }
         private void RingBell(MessageCliToServer msg)
         {
+            if (msg.timestamp == null) return;
+
             //Todo: 타임스탬프 밀리초단위 시간차 받아서
-            Random rand = new Random();
-            int value = rand.Next(1, 6);
-            Table.Instance.bell.Ring(msg.playerId, value);
+            int value = (int)msg.timestamp;
+
+            Table.Instance.bell.Ring(msg.playerName, value);
             // Json으로 받은 정보가 종 울리기일 경우
         }
 

@@ -7,20 +7,20 @@ using System.Threading.Tasks;
 namespace HalliGalli_Server
 {
 
-    public class PlayerId_TimeDIf
+    public class PlayerName_TimeDIf
     {
-        public int PlayerId { get; set; }
+        public string PlayerName { get; set; }
         public int TimeDif { get; set; }
 
-        public PlayerId_TimeDIf()
+        public PlayerName_TimeDIf()
         {
-            this.PlayerId = 0;
+            this.PlayerName = "없음";
             this.TimeDif = -1;
         }
 
-        public PlayerId_TimeDIf(int userId, int timeDif)
+        public PlayerName_TimeDIf(string playerName, int timeDif)
         {
-            this.PlayerId = userId;
+            this.PlayerName = playerName;
             this.TimeDif = timeDif;
         }
     }
@@ -34,20 +34,20 @@ namespace HalliGalli_Server
 
         public bool isDeciding = false;
 
-        public List<PlayerId_TimeDIf> TimeDifList;
+        public List<PlayerName_TimeDIf> TimeDifList;
 
         private readonly object lockObj = new();
 
         public Bell()
         {
-            this.TimeDifList = new List<PlayerId_TimeDIf>();
+            this.TimeDifList = new List<PlayerName_TimeDIf>();
         }
 
-        public void Ring(int playerId, int timeDif)
+        public void Ring(string playerName, int timeDif)
         {
             if (!isActive)
             {
-                Table.Instance.ApplyPenalty(playerId);
+                Table.Instance.ApplyPenalty(playerName);
                 return;
             }
             if (!isDeciding)
@@ -55,16 +55,16 @@ namespace HalliGalli_Server
                 isDeciding = true;
                 new Thread(new ThreadStart(StartDecision)).Start();
             }
-            TimeDifList.Add(new PlayerId_TimeDIf(playerId, timeDif));
+            TimeDifList.Add(new PlayerName_TimeDIf(playerName, timeDif));
         }
 
         public void StartDecision()
         {
             Thread.Sleep(2000);
-            int winner = DecideWinner();
-            if (winner == -1)
+            string winner = DecideWinner();
+            if (winner == "없음")
             {
-                // Todo: 브로드캐스팅 (우승자 없음)
+                Broadcaster.Instance.BroadcastToAll(new MessageServerToCli(9)); // 9 -> 우승자없음
             }
             // Todo: 브로드캐스팅 (...번 우승)
             Table.Instance.MergeDeck(winner);
@@ -86,17 +86,17 @@ namespace HalliGalli_Server
             isActive = false;
         }
 
-        public int DecideWinner()
+        public string DecideWinner()
         {
             int MinDif = int.MaxValue;
-            int CurWinner = -1;
+            string CurWinner = "없음";
 
-            foreach(PlayerId_TimeDIf pt in TimeDifList)
+            foreach(PlayerName_TimeDIf pt in TimeDifList)
             {
                 if(pt.TimeDif < MinDif)
                 {
                     MinDif = pt.TimeDif;
-                    CurWinner = pt.PlayerId;
+                    CurWinner = pt.PlayerName;
                 }
             }
 
