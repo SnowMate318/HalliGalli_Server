@@ -21,10 +21,6 @@ namespace HalliGalli_Server
         public bool gameStart = false; // 인원을 더 받을지 트리거로 사용
 
         private Table(){
-            Init();
-        }
-
-        public void Init() {
             fruitCardCount = new Dictionary<string, int>();//사과 바나나 포도 수박 과일 별 카드 수 딕셔너리 생성
 
             fruitCardCount["사과"] = 0;
@@ -35,9 +31,9 @@ namespace HalliGalli_Server
             tableDeck = new Queue<Card>();
             bell = new Bell();
             players = new List<Player>();
+            openedCards = new List<Card>();
             currentTurnPlayerId = 0;
         }
-
         public void StartGame()
         {
             //Todo:  56장의 카드를 N명에게 나눠줌, 나머지 정보들 초기화
