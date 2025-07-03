@@ -1,7 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
+using System.Net;
+using System.Net.Sockets;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace HalliGalli_Server
@@ -9,14 +13,67 @@ namespace HalliGalli_Server
     // 관리 클래스 (싱글톤)
     public class Manager
     {
+        private const int MAX_THREAD = 4;
+        private int currentThreadCount = 0;
+        TcpListener server;
+
+        private Manager() {
+
+            //ip 어드레스와 포트번호 필요
+            server = new TcpListener(IPAddress.Any, 1234);
+
+            Console.WriteLine("서버 시작");
+            server.Start();
+        }
         public static Manager Instance { get; } = new Manager();
 
-        private int maxThread;
-        private int currentThread;
-        private object server;
+        
+        public void Init()
+        {            
 
-        public void AddUser() { }
-        public void CheckUserAvailable() { }
-        public void RemoveUser(int playerId) { }
+            Thread thread = new Thread(new ThreadStart(ServerOpen));
+            thread.Start();
+            
+        }
+
+        public void ServerOpen()
+        {
+            while (true)
+            {
+                try
+                {
+                    TcpClient client = server.AcceptTcpClient();
+                    if (client != null && CheckUserAvailable())
+                    {
+                        Thread ClientThread = new Thread(new ParameterizedThreadStart(AddUser));
+                        currentThreadCount++;
+                        ClientThread.Start(client);
+
+                    }
+                }
+                catch (IOException ex) {
+
+                    RemoveUser(1); // Todo: 아이디 확인 후 제거 요청 브로드캐스팅
+                    continue;
+                
+                }
+            }
+        }
+        public void AddUser(object obj) {
+            //Todo: 
+            
+        }
+        public bool CheckUserAvailable() {
+            return currentThreadCount < MAX_THREAD;
+              
+        }
+        public void RemoveUser(int playerId) {
+
+            currentThreadCount--;
+
+
+        }
+
+        
     }
 }

@@ -9,7 +9,7 @@ namespace HalliGalli_Server
     {
         public static void Main()
         {
-
+            
         }
     }
 }
