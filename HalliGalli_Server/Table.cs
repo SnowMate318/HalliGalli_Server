@@ -9,14 +9,38 @@ namespace HalliGalli_Server
     // 테이블 클래스
     public class Table
     {
-        public List<Player> players = new();
-        public List<Card> openedCards = new();
-        public Dictionary<string, int> fruitCardCount = new();
+        // 1) 유일한 인스턴스를 저장할 정적 필드
+        private static readonly Table _instance = new Table();
 
-        public Queue<Card> tableDeck = new();
+        public List<Player> players;
+        public List<Card> openedCards;
+        public Dictionary<string, int> fruitCardCount;
+        public Queue<Card> tableDeck;
         public int currentTurnPlayerId;
-        public bool isActive;
-        public Bell bell = new();
+        public Bell bell;
+        public bool gameStart = false; // 인원을 더 받을지 트리거로 사용
+
+        private Table()
+        {
+
+            fruitCardCount = new Dictionary<string, int>();//사과 바나나 포도 수박 과일 별 카드 수 딕셔너리 생성
+
+            fruitCardCount["사과"] = 0;
+            fruitCardCount["바나나"] = 0;
+            fruitCardCount["포도"] = 0;
+            fruitCardCount["수박"] = 0;
+
+            tableDeck = new Queue<Card>();
+            bell = new Bell();
+            players = new List<Player>();
+            currentTurnPlayerId = 0;
+            
+        }
+
+        public Table getInstance()
+        {
+            return _instance;
+        }
 
         public void StartGame()
         {
