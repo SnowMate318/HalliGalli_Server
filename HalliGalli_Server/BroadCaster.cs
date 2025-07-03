@@ -23,11 +23,11 @@ namespace HalliGalli_Server
         {
             playerId = 0;
             isTurnActive = false;
-            Card = new Card();
+            Card = new Card("서버로 잘 전달됨",200);
             userState = 0;
             openCards = new Card[2];
-            openCards[0] = new Card();
-            openCards[1] = new Card();
+            openCards[0] = new Card("서버로 잘 전달됨", 200);
+            openCards[1] = new Card("서버로 잘 전달됨", 200);
         }
 
         public Message(int playerId, bool isTurnActivate, Card card, int userState, Card[] openCards)
@@ -39,11 +39,36 @@ namespace HalliGalli_Server
             this.openCards = openCards;
         }
     }
-
-    public class Message2
+    
+    public class MessageCliToServer
     {
+        //"id": int // 테이블 구분할 id
+        //"key": int (enum) // 사용자가 누른 키
+        //"time_dif": timestamp // 시간차(ms 단위, optional) 
+        //"penalty": bool // 패널티 여부(확정 x)
         public int playerId;
-        public required string message;
+        public string key;
+        public DateTime? timestamp;
+        public bool penalty;
+
+        public MessageCliToServer() { 
+            this.playerId=0;
+            this.key = "";
+            this.timestamp = DateTime.Now;
+            this.penalty = false; 
+        }
+        public MessageCliToServer(int playerId, string key, bool penalty) { 
+            this.playerId =playerId;
+            this.key = key;
+            this.penalty = penalty;
+        }
+        public MessageCliToServer(int playerId, string key, DateTime timestamp, bool penalty) { 
+            this.playerId =playerId;
+            this.key = key;
+            this.timestamp = timestamp;
+            this.penalty = penalty;
+        }
+
     }
 
     public class Broadcaster
@@ -52,13 +77,23 @@ namespace HalliGalli_Server
 
         public void SendJson<T>(T obj, NetworkStream stream)
         {
-            string json = JsonSerializer.Serialize(obj);
+            var options = new JsonSerializerOptions
+            {
+                IncludeFields = true, // ← 필드 포함
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase, // JSON 네이밍 정책
+                DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.Never,
+                WriteIndented = true
+            };
+
+            string json = JsonSerializer.Serialize(obj, options);
             byte[] data = Encoding.UTF8.GetBytes(json);
             byte[] dataLength = BitConverter.GetBytes(data.Length);
 
-            stream.Write(dataLength, 0, 4);  // 데이터 길이 먼저 전송 (4바이트)
-            stream.Write(data, 0, data.Length);  // 실제 데이터 전송
+            stream.Write(dataLength, 0, 4);
+            stream.Write(data, 0, data.Length);
             stream.Flush();
+
+            Console.WriteLine("보낸 JSON:\n" + json);
         }
 
     }
