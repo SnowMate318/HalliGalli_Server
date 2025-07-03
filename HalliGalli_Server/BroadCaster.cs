@@ -45,5 +45,23 @@ namespace HalliGalli_Server
                 SendJson(message, player.tcpClient.GetStream());
             }
         }
+        public void BroadcastNextTurn(MessageServerToCli message, int currentTurnPlayerId)
+        {
+            foreach (var kvp in Table.Instance.players)
+            {
+                Player player = kvp.Value; // KeyValuePair에서 Player 객체를 가져옴
+                   
+                if(player.playerId == currentTurnPlayerId)
+                {
+                    message.isTurnActive = true;
+                }
+                else
+                {
+                    message.isTurnActive = false;
+                }
+
+                SendJson(message, player.tcpClient.GetStream());
+            }
+        }
     }
 }

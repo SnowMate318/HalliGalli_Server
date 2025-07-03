@@ -8,12 +8,15 @@ namespace HalliGalli_Server
 {
     public enum GameEvent
     {
-        WIN = 1,
+        None = 0,
+        WIN,
         LOSE,
         PENALTY,
         ENTER,
         EXIT,
         DUP_NAME,
-        GAME_START
+        GAME_START,
+        GAME_WIN, //7
+        GAME_LOSE
     }
 }

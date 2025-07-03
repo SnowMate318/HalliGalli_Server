@@ -21,7 +21,6 @@ namespace HalliGalli_Server
         }
         public Card DrawCard()
         {
-            //Todo: 카드 반환  
             if (deck.Count == 0) return null;
             return deck.Dequeue();
         }

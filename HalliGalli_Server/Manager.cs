@@ -159,7 +159,7 @@ namespace HalliGalli_Server
                 currentThreadCount--;
             }
 
-            Table.Instance.PlayerDeath(player.playerId);
+            Table.Instance.PlayerDeath(player.username);
             Table.Instance.players.Remove(player.username);
             player.stream.Close();
             player.tcpClient.Close();

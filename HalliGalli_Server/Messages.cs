@@ -18,6 +18,7 @@ namespace HalliGalli_Server
         public MessageServerToCli() // 테스트데이터 (디폴트값)
         {
             playerId = 0;
+            playerName = "";
             isTurnActive = false;
             Card = new Card("서버로 잘 전달됨", 200);
             userState = 0;
@@ -40,11 +41,10 @@ namespace HalliGalli_Server
             this.userState = userState;
         }
 
-        public MessageServerToCli(int playerId, string playerName, bool isTurnActivate, Card card, int userState, Card[] openCards)
+        public MessageServerToCli(int playerId, string playerName, Card card, int userState, Card[] openCards)
         {
             this.playerId = playerId;
             this.playerName = playerName;
-            this.isTurnActive = isTurnActivate;
             this.Card = card;
             this.userState = userState;
             this.openCards = openCards;
