@@ -105,7 +105,7 @@ namespace HalliGalli_Server
                     msg = player.ReceiveJson<MessageCliToServer>();
                     if (msg != null) {
 
-                        if(!gamestart && msg.key == "p")
+                        if(!gamestart && msg.key == 3) // p->3
                         {
                             gamestart = true;
                             continue;

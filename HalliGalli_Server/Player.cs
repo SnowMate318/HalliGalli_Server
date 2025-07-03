@@ -39,10 +39,10 @@ namespace HalliGalli_Server
             // 유저정보를 수신함
             switch (msg.key)
             {
-                case "k":
+                case 1:
                     PlayCard(msg);
                     break;
-                case " ":
+                case 2:
                     RingBell(msg);
                     break;
             }

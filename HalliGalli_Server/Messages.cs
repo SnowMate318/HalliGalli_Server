@@ -55,23 +55,23 @@ namespace HalliGalli_Server
     {
         public int playerId;
         public string playerName;
-        public string key;
+        public int key;
         public int? timestamp;
 
         public MessageCliToServer()
         {
             this.playerId = 0;
             this.playerName = "";
-            this.key = "";
+            this.key = 0;
             this.timestamp = 0;
         }
-        public MessageCliToServer(int playerId, string playerName, string key)
+        public MessageCliToServer(int playerId, string playerName, int key)
         {
             this.playerId = playerId;
             this.playerName = playerName;
             this.key = key;
         }
-        public MessageCliToServer(int playerId, string playerName, string key, int timestamp)
+        public MessageCliToServer(int playerId, string playerName, int key, int timestamp)
         {
             this.playerId = playerId;
             this.playerName = playerName;

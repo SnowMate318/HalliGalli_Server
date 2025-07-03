@@ -19,4 +19,11 @@ namespace HalliGalli_Server
         GAME_WIN, //7
         GAME_LOSE
     }
+    public enum Commend
+    {
+        K = 1,
+        SPACE,
+        P
+    }
 }
+  
