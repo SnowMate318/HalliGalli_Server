@@ -6,78 +6,96 @@ using System.Threading.Tasks;
 
 namespace HalliGalli_Server
 {
+    using System.Text.Json.Serialization;
+
     public class MessageServerToCli
     {
-        public int? playerId;
-        public string playerName;
-        public bool? isTurnActive;
-        public Card? Card;
-        public int? userState;
-        public Card[]? openCards;
+        [JsonPropertyName("id")]
+        public int? PlayerId { get; set; }
 
-        public MessageServerToCli() // 테스트데이터 (디폴트값)
+        [JsonPropertyName("name")]
+        public string PlayerName { get; set; } = "";
+
+        [JsonPropertyName("turn")]
+        public bool IsTurnActive { get; set; }
+        //[JsonPropertyName("card")]
+        //public Card Card { get; set; }
+
+        // 펼쳐진 카드 목록 → JSON의 "카드정보"
+        [JsonPropertyName("card")]
+        public Card[]? OpenCards { get; set; }
+
+        [JsonPropertyName("user_status")]
+        public int? UserState { get; set; }
+
+        // 남은 카드 개수 배열 → JSON의 "남은카드개수"
+        [JsonPropertyName("remaining_card_count")]
+        public int[]? RemainingCardCounts { get; set; }
+
+        public MessageServerToCli() { }
+
+        public MessageServerToCli(int userState)
         {
-            playerId = 0;
-            playerName = "";
-            isTurnActive = false;
-            Card = new Card("서버로 잘 전달됨", 200);
-            userState = 0;
-            openCards = new Card[2];
-            openCards[0] = new Card("서버로 잘 전달됨", 200);
-            openCards[1] = new Card("서버로 잘 전달됨", 200);
+            IsTurnActive = false;
+            OpenCards = new Card[0];
+            UserState = userState;
+            RemainingCardCounts = new int[0];
         }
-
-        public MessageServerToCli(int state) // 테스트데이터 (디폴트값)
-        {
-            this.userState = state;
-        }
-
-
-
         public MessageServerToCli(int playerId, string playerName, int userState)
         {
-            this.playerId = playerId;
-            this.playerName = playerName;
-            this.userState = userState;
-        }
+            PlayerId = playerId;
+            PlayerName = playerName;
+            IsTurnActive = false;
+            OpenCards = new Card[0];
+            UserState = userState;
+            RemainingCardCounts = new int[0];
 
-        public MessageServerToCli(int playerId, string playerName, Card card, int userState, Card[] openCards)
+            
+        }
+        public MessageServerToCli(int playerId, string playerName, bool turn, Card card, Card[] openCards, int userState, int[] remainingCounts)
         {
-            this.playerId = playerId;
-            this.playerName = playerName;
-            this.Card = card;
-            this.userState = userState;
-            this.openCards = openCards;
+            PlayerId = playerId;
+            PlayerName = playerName;
+            IsTurnActive = turn;
+            //Card = card;
+            OpenCards = openCards;
+            UserState = userState;
+            RemainingCardCounts = remainingCounts;
         }
     }
 
     public class MessageCliToServer
     {
-        public int playerId;
-        public string playerName;
+        public int id;
+        public string name;
         public int key;
-        public int? timestamp;
+        public int? time_dif;
+        public bool penalty; 
 
         public MessageCliToServer()
         {
-            this.playerId = 0;
-            this.playerName = "";
+            this.id = 0;
+            this.name = "";
             this.key = 0;
-            this.timestamp = 0;
-        }
-        public MessageCliToServer(int playerId, string playerName, int key)
-        {
-            this.playerId = playerId;
-            this.playerName = playerName;
-            this.key = key;
-        }
-        public MessageCliToServer(int playerId, string playerName, int key, int timestamp)
-        {
-            this.playerId = playerId;
-            this.playerName = playerName;
-            this.key = key;
-            this.timestamp = timestamp;
+            this.time_dif = 0;
+            this.penalty = false;
         }
 
-    }
+        public MessageCliToServer(int playerId, string playerName, int key, bool penalty)
+        {
+            this.id = playerId;
+            this.name = playerName;
+            this.key = key;
+            this.penalty = penalty;
+        }
+
+        public MessageCliToServer(int playerId, string playerName, int key, int time_dif, bool penalty)
+        {
+            this.id = playerId;
+            this.name = playerName;
+            this.key = key;
+            this.time_dif = time_dif;
+            this.penalty = penalty;
+        }
+    }   
 }

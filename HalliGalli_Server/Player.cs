@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net.Sockets;
@@ -55,43 +56,68 @@ namespace HalliGalli_Server
             {
                 return;
             }
-            Table.Instance.PlayCard(msg.playerName); // 테이블에서 카드 내기 로직 호출
+            Table.Instance.PlayCard(msg.name); // 테이블에서 카드 내기 로직 호출
         }
         private void RingBell(MessageCliToServer msg)
         {
-            if (msg.timestamp == null) return;
+            if (msg.time_dif == null) return;
 
             //Todo: 타임스탬프 밀리초단위 시간차 받아서
-            int value = (int)msg.timestamp;
+            int value = (int)msg.time_dif;
 
-            Table.Instance.bell.Ring(msg.playerName, value);
+            Table.Instance.bell.Ring(msg.name, value);
             // Json으로 받은 정보가 종 울리기일 경우
         }
 
         public T ReceiveJson<T>()
         {
-            byte[] lengthBytes = new byte[4];
-            stream.Read(lengthBytes, 0, 4);
-            int length = BitConverter.ToInt32(lengthBytes, 0);
-
-            byte[] data = new byte[length];
-            int readBytes = 0;
-            while (readBytes < length)
+            string str = reader.ReadLine();
+            Console.WriteLine(str);
+            try
             {
-                int r = stream.Read(data, readBytes, length - readBytes);
-                if (r == 0) throw new IOException("Disconnected");
-                readBytes += r;
+                var options = new JsonSerializerOptions
+                {
+                    IncludeFields = true,
+                    PropertyNameCaseInsensitive = true
+                };
+
+                T data = JsonSerializer.Deserialize<T>(str,options);
+                Console.WriteLine("=== 수신된 원본 JSON ===");
+                Console.WriteLine(data.ToString());
+                Console.WriteLine("========================");
+                return data;
             }
-
-            string json = Encoding.UTF8.GetString(data);
-
-            //테스트
-            Console.WriteLine("=== 수신된 원본 JSON ===");
-            Console.WriteLine(json);
-            Console.WriteLine("========================");
-
-            return JsonSerializer.Deserialize<T>(json);
+            catch (Exception ex)
+            {
+                Console.WriteLine("파싱 실패: " + ex.Message);
+                return default(T); // Ensure all code paths return a value
+            }
         }
+
+        //public T ReceiveJson<T>()
+        //{
+        //    byte[] lengthBytes = new byte[4];
+        //    stream.Read(lengthBytes, 0, 4);
+        //    int length = BitConverter.ToInt32(lengthBytes, 0);
+
+        //    byte[] data = new byte[length];
+        //    int readBytes = 0;
+        //    while (readBytes < length)
+        //    {
+        //        int r = stream.Read(data, readBytes, length - readBytes);
+        //        if (r == 0) throw new IOException("Disconnected");
+        //        readBytes += r;
+        //    }
+
+        //    string json = Encoding.UTF8.GetString(data);
+
+        //    //테스트
+        //    Console.WriteLine("=== 수신된 원본 JSON ===");
+        //    Console.WriteLine(json);
+        //    Console.WriteLine("========================");
+
+        //    return JsonSerializer.Deserialize<T>(json);
+        //}
 
 
 

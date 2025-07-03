@@ -60,6 +60,7 @@ namespace HalliGalli_Server
 
         public void StartDecision()
         {
+
             Thread.Sleep(2000);
             string winner = DecideWinner();
             if (winner == "없음")

@@ -70,38 +70,39 @@ namespace HalliGalli_Server
             TcpClient Client = (TcpClient)obj;
             NetworkStream stream = Client.GetStream();
 
-            int playerid = 0;
-            for(int i = 0; i < 4; i++)
-            {
-                if (!idBox[i])
-                {
-                    lock (threadLock) {
-                        idBox[i] = true;
-                    }
-                    playerid = i;
-                    break;
-                }
-            }
+            int playerId = getPlayerId();
 
-            Player player = new Player(playerid, stream, Client); 
+            Player player = new Player(playerId, stream, Client); 
+            //MessageCliToServer msg = player.ReceiveJson<MessageCliToServer>();
             MessageCliToServer msg = player.ReceiveJson<MessageCliToServer>();
-
-            if (msg!=null)
-            {
-                if (Table.Instance.players[msg.playerName] != null)
-                {
-
-                    throw new Exception("이름 중복");
-                }
-                player.username = msg.playerName;
-            }
-
-            Table.Instance.AddPlayer(player); // 수정
-
+            
             try
             {
+                if (msg != null)
+                {
+                    //Console.WriteLine("msg.id: "+msg.id+"msg.name:"+msg.name+"msg.key:"+msg.key);
+                    if (string.IsNullOrWhiteSpace(msg.name))
+                        throw new Exception("이름이 비어 있습니다.");
+
+                    if (Table.Instance.players.ContainsKey(msg.name))
+                        throw new Exception("이름 중복");
+                    player.username = msg.name;
+                }
+
+                Table.Instance.AddPlayer(player); // 수정
+                MessageServerToCli callBack = new MessageServerToCli(
+                    player.playerId,
+                    player.username,
+                    4
+                 );
+                Console.WriteLine(callBack.ToString());
+
+                Broadcaster.Instance.BroadcastToAll(callBack);
+                Broadcaster.Instance.BroadcastEnternece(player);
+
                 while (true)
                 {
+
                     msg = player.ReceiveJson<MessageCliToServer>();
                     if (msg != null) {
 
@@ -128,17 +129,17 @@ namespace HalliGalli_Server
             {
                 Console.WriteLine($"{player.playerId} 연결 종료");
                 Broadcaster.Instance.BroadcastToAll(new MessageServerToCli(player.playerId, player.username, 5)); // 5 -> 퇴장
+                RemoveUser(player);
             }
             catch (Exception e)
             {
                 if(e.Message=="이름 중복")
                 {
                     Broadcaster.Instance.BroadcastToAll(new MessageServerToCli(6)); // 6 -> 이름 중복
+                } else
+                {
+                    Console.WriteLine("유저 연결: 예상치 못한 오류"+e.Message);
                 }
-            }
-            finally
-            {
-                RemoveUser(player);
             }
 
         }
@@ -163,6 +164,24 @@ namespace HalliGalli_Server
             Table.Instance.players.Remove(player.username);
             player.stream.Close();
             player.tcpClient.Close();
+        }
+
+        private int getPlayerId()
+        {
+            int playerid = 0;
+            for (int i = 0; i < 4; i++)
+            {
+                if (!idBox[i])
+                {
+                    lock (threadLock)
+                    {
+                        idBox[i] = true;
+                    }
+                    playerid = i;
+                    break;
+                }
+            }
+            return playerid;
         }
 
         

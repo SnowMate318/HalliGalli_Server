@@ -99,7 +99,19 @@ namespace HalliGalli_Server
             playerOrder.Add(playerName); // 플레이어 순서 리스트에도 추가!
         }
 
+        public int[] GetAllPlayerCardCounts()
+        {
+            int size = players.Count;
+            int[] res = new int[size]; // Fixed array declaration and initialization
 
+            int index = 0;
+            foreach (var player in players.Values)
+            {
+                res[index++] = player.cardDeck.deck.Count; // Populate the array with card counts
+            }
+
+            return res;
+        }
 
 
         public void PlayCard(string playerName)
@@ -153,9 +165,11 @@ namespace HalliGalli_Server
             MessageServerToCli msg = new MessageServerToCli(
                 player.playerId,
                 player.username,
+                false,
                 currentCard,
+                cards,
                 0, // 아무상태없음
-                cards
+                GetAllPlayerCardCounts()
             );
             Broadcaster.Instance.BroadcastNextTurn(msg, currentTurnPlayerId);
 
