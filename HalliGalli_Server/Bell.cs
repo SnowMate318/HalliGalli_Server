@@ -6,34 +6,102 @@ using System.Threading.Tasks;
 
 namespace HalliGalli_Server
 {
+
+    public class PlayerId_TimeDIf
+    {
+        public int PlayerId { get; set; }
+        public int TimeDif { get; set; }
+
+        public PlayerId_TimeDIf()
+        {
+            this.PlayerId = 0;
+            this.TimeDif = -1;
+        }
+
+        public PlayerId_TimeDIf(int userId, int timeDif)
+        {
+            this.PlayerId = userId;
+            this.TimeDif = timeDif;
+        }
+    }
+
     // 종 클래스
     public class Bell
     {
-        public bool isActive = false;// 과일 5개가 모였을 때 활성화
-                                     // 활성화가 되지 않으면 패널티
-                                     // 활성화가 되어있으면 버퍼에 정보저장 후 승리자 판별
-        public Dictionary<int, double> buffer = new();
+        public bool isActive = false; // 과일 5개가 모였을 때 활성화
+                                      // 활성화가 되지 않으면 패널티
+                                      // 활성화가 되어있으면 버퍼에 정보저장 후 승리자 판별
 
-        public void Ring(int playerId)
+        public bool isDeciding = false;
+
+        public List<PlayerId_TimeDIf> TimeDifList;
+
+        private readonly object lockObj = new();
+
+        public Bell()
         {
-            // Todo: 활성화가 안된 상태일때는 패널티 부여 (다른 유저에게 카드 1장씩 주기)
-            // 활성화가 된 상태일때는 버퍼에다 정보 저장
+            this.TimeDifList = new List<PlayerId_TimeDIf>();
         }
+
+        public void Ring(int playerId, int timeDif)
+        {
+            if (!isActive)
+            {
+                Table.Instance.ApplyPenalty(playerId);
+                return;
+            }
+            if (!isDeciding)
+            {
+                isDeciding = true;
+                new Thread(new ThreadStart(StartDecision)).Start();
+            }
+            TimeDifList.Add(new PlayerId_TimeDIf(playerId, timeDif));
+        }
+
+        public void StartDecision()
+        {
+            Thread.Sleep(2000);
+            int winner = DecideWinner();
+            if (winner == -1)
+            {
+                // Todo: 브로드캐스팅 (우승자 없음)
+            }
+            // Todo: 브로드캐스팅 (...번 우승)
+            Table.Instance.MergeDeck(winner);
+
+            // 쓰레드 종료
+            TimeDifList.Clear();
+            isDeciding = false;
+            isActive = false;
+            return;
+        }
+
         public void Activate()
         {
-
             isActive = true;
         }
+
         public void Deactivate()
         {
-
             isActive = false;
         }
+
         public int DecideWinner()
         {
-            // Todo: 버퍼에 있는 정보 중 시간차가 가장 작은 유저의 id 반환
-            // 버퍼 비움
-            return -1;
+            int MinDif = int.MaxValue;
+            int CurWinner = -1;
+
+            foreach(PlayerId_TimeDIf pt in TimeDifList)
+            {
+                if(pt.TimeDif < MinDif)
+                {
+                    MinDif = pt.TimeDif;
+                    CurWinner = pt.PlayerId;
+                }
+            }
+
+
+            return CurWinner;
         }
     }
 }

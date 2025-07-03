@@ -19,6 +19,7 @@ namespace HalliGalli_Server
         private const int MAX_THREAD = 4;
         private int currentThreadCount = 0;
         TcpListener server;
+        bool gamestart = false;
 
         private Manager()
         {
@@ -47,7 +48,7 @@ namespace HalliGalli_Server
                 TcpClient client = server.AcceptTcpClient();
                 if (client != null && CheckUserAvailable())
                 {
-                    Thread ClientThread = new Thread(new ParameterizedThreadStart(AddUser));
+                    Thread ClientThread = new Thread(new ParameterizedThreadStart(UserTCPStert));
                     lock (threadLock)
                     {
                         currentThreadCount++;
@@ -57,7 +58,7 @@ namespace HalliGalli_Server
                 }
             }
         }
-        public void AddUser(object obj) // 유저 추가시 
+        public void UserTCPStert(object obj) // 유저 추가시 
         {
             TcpClient Client = (TcpClient)obj;
             NetworkStream stream = Client.GetStream();
@@ -70,15 +71,23 @@ namespace HalliGalli_Server
                 {
                     MessageCliToServer msg = player.ReceiveJson<MessageCliToServer>();
                     if (msg != null) {
-                        
 
+                        if(!gamestart && msg.key == "p")
+                        {
+                            gamestart = true;
+                            continue;
+                        }
+
+
+
+                        // todo:
                         // 메세지를 받았을때 로직을 처리
                         // 상태 기준 판단
                         // 상대가 누른 키를 기준으로 판단
 
 
                         // 테스트(쓰레기값 주기)
-                        player.BroadcastToAll(new Message());
+                        Broadcaster.Instance.BroadcastToAll(new Message());
                     }
 
 
@@ -98,7 +107,7 @@ namespace HalliGalli_Server
         {
             lock (threadLock)
             {
-                return currentThreadCount < MAX_THREAD;
+                return (!gamestart && currentThreadCount < MAX_THREAD);
             }
 
         }
