@@ -90,7 +90,15 @@ namespace HalliGalli_Server
             tableDeck.Clear();
             currentTurnPlayerId = 0;
             gameStart = true;
-
+            foreach(var kvp in players)
+            {
+                PlayCard(kvp.Value.username);
+                foreach(var card in openedCards)
+                {
+                    Console.WriteLine(card.fruitType + " "+card.count);
+                }
+            }
+            
         }
         public void AddPlayer(Player player)
         {
@@ -99,15 +107,15 @@ namespace HalliGalli_Server
             playerOrder.Add(playerName); // 플레이어 순서 리스트에도 추가!
         }
 
-        public int[] GetAllPlayerCardCounts()
+        public MessageCardCount[] GetAllPlayerCardCounts()
         {
             int size = players.Count;
-            int[] res = new int[size]; // Fixed array declaration and initialization
+            MessageCardCount[] res = new MessageCardCount[size]; // Fixed array declaration and initialization
 
             int index = 0;
             foreach (var player in players.Values)
             {
-                res[index++] = player.cardDeck.deck.Count; // Populate the array with card counts
+                res[index++] = new MessageCardCount(player.playerId, player.cardDeck.deck.Count);
             }
 
             return res;
@@ -126,6 +134,7 @@ namespace HalliGalli_Server
 
             // 2. 카드 한 장 뽑기
             Card card = player.cardDeck.DrawCard();
+            player.frontCard = card;
             if (card == null)
                 throw new InvalidOperationException("플레이어의 카드가 모두 소진되었습니다.");
 
@@ -162,16 +171,15 @@ namespace HalliGalli_Server
             }
 
             // 브로드캐스팅int playerId, string playerName, Card card, int userState, Card[] openCards
-            MessageServerToCli msg = new MessageServerToCli(
-                player.playerId,
-                player.username,
-                false,
-                currentCard,
-                cards,
-                0, // 아무상태없음
-                GetAllPlayerCardCounts()
-            );
-            Broadcaster.Instance.BroadcastNextTurn(msg, currentTurnPlayerId);
+            MessageCard[] messageCards = new MessageCard[players.Count];
+            int idx = 0;
+            foreach(var kvp in players)
+            {
+                Player ply = kvp.Value;
+                messageCards[idx++] = new MessageCard(ply.playerId, ply.frontCard.getNum());
+            }
+
+            Broadcaster.Instance.BroadcastNextTurn(messageCards, currentTurnPlayerId);
 
         }
         public void MergeDeck(string playerName)

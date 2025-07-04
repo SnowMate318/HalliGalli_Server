@@ -23,6 +23,7 @@ namespace HalliGalli_Server
         public NetworkStream stream;
         public StreamReader reader;
         public StreamWriter writer;
+        public Card frontCard { get; set; }
 
         public Player(int id, NetworkStream stream, TcpClient client)
         {
@@ -31,7 +32,7 @@ namespace HalliGalli_Server
             this.reader = new StreamReader(stream);
             this.writer = new StreamWriter(stream); 
             this.tcpClient = client;
-            
+            frontCard = new Card();
             //Todo: 유저이름 입력받기(회의 필요)
         }
 

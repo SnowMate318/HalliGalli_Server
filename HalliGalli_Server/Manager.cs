@@ -75,19 +75,20 @@ namespace HalliGalli_Server
             Player player = new Player(playerId, stream, Client); 
             //MessageCliToServer msg = player.ReceiveJson<MessageCliToServer>();
             MessageCliToServer msg = player.ReceiveJson<MessageCliToServer>();
-            
+            if (msg == null)
+            {
+                Console.WriteLine("초기 메시지 수신 실패, 연결 종료");
+                return; 
+            }
             try
             {
-                if (msg != null)
-                {
-                    //Console.WriteLine("msg.id: "+msg.id+"msg.name:"+msg.name+"msg.key:"+msg.key);
-                    if (string.IsNullOrWhiteSpace(msg.name))
-                        throw new Exception("이름이 비어 있습니다.");
+                //Console.WriteLine("msg.id: "+msg.id+"msg.name:"+msg.name+"msg.key:"+msg.key);
+                if (string.IsNullOrWhiteSpace(msg.name))
+                    throw new Exception("이름이 비어 있습니다.");
 
-                    if (Table.Instance.players.ContainsKey(msg.name))
-                        throw new Exception("이름 중복");
-                    player.username = msg.name;
-                }
+                if (Table.Instance.players.ContainsKey(msg.name))
+                    throw new Exception("이름 중복");
+                player.username = msg.name;
 
                 Table.Instance.AddPlayer(player); // 수정
                 MessageServerToCli callBack = new MessageServerToCli(
@@ -109,6 +110,7 @@ namespace HalliGalli_Server
                         if(!gamestart && msg.key == 3) // p->3
                         {
                             gamestart = true;
+                            Table.Instance.StartGame();
                             continue;
                         }
 

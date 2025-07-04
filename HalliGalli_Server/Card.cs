@@ -22,6 +22,33 @@ namespace HalliGalli_Server
             this.fruitType = fruitType;
             this.count = count;
         }
+     
+        public int getNum()
+        {
+            int res = 0;
+            switch (fruitType) {
+                case "apple":
+                    res = 0;
+                    break;
+                case "banana":
+                    res = 5;
+                    break;
+                case "grape":
+                    res = 10;
+                    break;
+                case "watermelon":
+                    res = 15;
+                    break;
+                
+                default:
+                    res = -5;
+                    break;
+            
+            }
+            res += count;
+            return res;
+        }
         
+
     }
 }

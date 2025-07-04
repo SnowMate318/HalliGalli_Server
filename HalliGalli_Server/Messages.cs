@@ -23,36 +23,36 @@ namespace HalliGalli_Server
 
         // 펼쳐진 카드 목록 → JSON의 "카드정보"
         [JsonPropertyName("card")]
-        public Card[]? OpenCards { get; set; }
+        public MessageCard[]? OpenCards { get; set; }
 
         [JsonPropertyName("user_status")]
         public int? UserState { get; set; }
 
         // 남은 카드 개수 배열 → JSON의 "남은카드개수"
         [JsonPropertyName("remaining_card_count")]
-        public int[]? RemainingCardCounts { get; set; }
+        public MessageCardCount[]? RemainingCardCounts { get; set; }
 
         public MessageServerToCli() { }
 
         public MessageServerToCli(int userState)
         {
             IsTurnActive = false;
-            OpenCards = new Card[0];
+            OpenCards = new MessageCard[0];
             UserState = userState;
-            RemainingCardCounts = new int[0];
+            RemainingCardCounts = new MessageCardCount[0];
         }
         public MessageServerToCli(int playerId, string playerName, int userState)
         {
             PlayerId = playerId;
             PlayerName = playerName;
             IsTurnActive = false;
-            OpenCards = new Card[0];
+            OpenCards = new MessageCard[0];
             UserState = userState;
-            RemainingCardCounts = new int[0];
+            RemainingCardCounts = new MessageCardCount[0];
 
             
         }
-        public MessageServerToCli(int playerId, string playerName, bool turn, Card card, Card[] openCards, int userState, int[] remainingCounts)
+        public MessageServerToCli(int playerId, string playerName, bool turn, MessageCard[] openCards, int userState, MessageCardCount[] remainingCounts)
         {
             PlayerId = playerId;
             PlayerName = playerName;
@@ -97,5 +97,36 @@ namespace HalliGalli_Server
             this.time_dif = time_dif;
             this.penalty = penalty;
         }
-    }   
+    }
+
+    public class MessageCard
+    {
+        [JsonPropertyName("ID")]
+        public int ID { get; set; }
+
+        [JsonPropertyName("num")]
+        public int Num { get; set; }
+
+        public MessageCard(int id, int num)
+        {
+            ID = id;
+            Num = num;
+        }
+    }
+
+    public class MessageCardCount
+    {
+        [JsonPropertyName("ID")]
+        public int ID { get; set; }
+
+        [JsonPropertyName("card_count")]
+        public int CardCount { get; set; }
+
+        public MessageCardCount(int id, int cardCount)
+        {
+            ID = id;
+            CardCount = cardCount;
+        }
+    }
+
 }

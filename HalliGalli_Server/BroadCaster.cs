@@ -38,15 +38,29 @@ namespace HalliGalli_Server
         //    Console.WriteLine("보낸 JSON:\n" + json);
         //}
 
-        public void SendJson<T>(T obj, NetworkStream stream)
+        public void SendJson<T>(T obj, NetworkStream stream, string name)
         {
+            if (stream == null || !stream.CanWrite)
+            {
+                Console.WriteLine("스트림이 null이거나 쓰기 불가능");
+                return;
+            }
+
             string json = JsonSerializer.Serialize(obj);
-            Console.WriteLine("보낸 JSON: " + json);
-            StreamWriter writer = new StreamWriter(stream);
-            writer.WriteLine(json);
-            writer.Flush();
-            writer.Close();
-            
+            try
+            {
+                using (StreamWriter writer = new StreamWriter(stream, leaveOpen: true))
+                {
+                    writer.WriteLine(json);
+                    writer.Flush();
+                    Console.WriteLine(name+"에게 보낸 JSON: " + json);
+                    Thread.Sleep(30);
+                }
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine("전송 실패: " + e.Message);
+            }
         }
 
         // 수정된 BroadcastToAll 메서드
@@ -56,44 +70,56 @@ namespace HalliGalli_Server
             foreach (var kvp in Table.Instance.players)
             {
                 Player player = kvp.Value; // KeyValuePair에서 Player 객체를 가져옴
-                SendJson(message, player.tcpClient.GetStream());
+                SendJson(message, player.stream, player.username);
             }
         }
 
         // 처음 입장했을 때 이미 참여한 사람들 정보를 뿌림
         public void BroadcastEnternece(Player target)
         {
+            Console.WriteLine("타겟 플레이어: "+target.username);
             foreach (var kvp in Table.Instance.players)
             {
                 Player player = kvp.Value; // KeyValuePair에서 Player 객체를 가져옴
-
                 MessageServerToCli message = new MessageServerToCli(
                         player.playerId,
                         player.username,
                         4
                     );
-
-                SendJson(message, target.tcpClient.GetStream());
+                
+                SendJson(message, target.stream, target.username);
+                Thread.Sleep(500);
             }
+            Console.WriteLine("---끝---");
         }
 
 
-        public void BroadcastNextTurn(MessageServerToCli message, int currentTurnPlayerId)
+        public void BroadcastNextTurn(MessageCard[] messageCards, int currentTurnPlayerId)
         {
             foreach (var kvp in Table.Instance.players)
             {
                 Player player = kvp.Value; // KeyValuePair에서 Player 객체를 가져옴
-                   
-                if(player.playerId == currentTurnPlayerId)
+
+                MessageServerToCli msg = new MessageServerToCli
                 {
-                    message.IsTurnActive = true;
+                    PlayerId = player.playerId,
+                    PlayerName = player.username,
+                    IsTurnActive = (player.playerId == currentTurnPlayerId),
+                    OpenCards = messageCards,
+                    UserState = 0,
+                    RemainingCardCounts = Table.Instance.GetAllPlayerCardCounts()
+                };
+
+                if (player.playerId == currentTurnPlayerId)
+                {
+                    msg.IsTurnActive = true;
                 }
                 else
                 {
-                    message.IsTurnActive = false;
+                    msg.IsTurnActive = false;
                 }
 
-                SendJson(message, player.tcpClient.GetStream());
+                SendJson(msg, player.stream, player.username);
             }
         }
     }
