@@ -73,6 +73,35 @@ namespace HalliGalli_Server
                 SendJson(message, player.stream, player.username);
             }
         }
+        public void BroadcastWinner(string winnerName)
+        {
+            foreach (var kvp in Table.Instance.players)
+            {
+                Player player = kvp.Value; // KeyValuePair에서 Player 객체를 가져옴
+
+                if (player.playerId == null) return;
+                int userState = 0;
+                if (player.username.Equals(winnerName))
+                {
+                    userState = 1;
+                }
+                else
+                {
+                    userState = 2;
+                    // Handle other cases if necessary
+                }
+                // Explicitly cast 'int?' to 'int' after checking for null
+                MessageServerToCli msg = new MessageServerToCli(
+                    player.playerId, // Fix: Use .Value to access the underlying int
+                    player.username,
+                    (player.playerId==Table.Instance.currentTurnPlayerId),
+                    userState
+                );
+
+                
+                SendJson(msg, player.stream, player.username);
+            }
+        }
 
         // 처음 입장했을 때 이미 참여한 사람들 정보를 뿌림
         public void BroadcastEnternece(Player target)

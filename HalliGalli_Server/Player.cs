@@ -41,7 +41,7 @@ namespace HalliGalli_Server
             // 유저정보를 수신함
             switch (msg.key)
             {
-                case 1:
+                case 1: // 
                     PlayCard(msg);
                     break;
                 case 2:
@@ -53,14 +53,21 @@ namespace HalliGalli_Server
         private void PlayCard(MessageCliToServer msg)
         {
             // Json으로 받은 정보가 카드 내기일 경우
-            if (!isTurn)
-            {
-                return;
-            }
+            //if (!isTurn)
+            //{
+            //    return;
+            //}
             Table.Instance.PlayCard(msg.name); // 테이블에서 카드 내기 로직 호출
         }
         private void RingBell(MessageCliToServer msg)
         {
+
+            if (msg.penalty == true)
+            {
+                Table.Instance.ApplyPenalty(msg.name);
+                Broadcaster.Instance.BroadcastToAll(new MessageServerToCli(3));
+                return;
+            }
             if (msg.time_dif == null) return;
 
             //Todo: 타임스탬프 밀리초단위 시간차 받아서
@@ -73,7 +80,7 @@ namespace HalliGalli_Server
         public T ReceiveJson<T>()
         {
             string str = reader.ReadLine();
-            Console.WriteLine(str);
+            Console.WriteLine("받은 json: "+str);
             try
             {
                 var options = new JsonSerializerOptions

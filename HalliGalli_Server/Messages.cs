@@ -37,30 +37,36 @@ namespace HalliGalli_Server
         public MessageServerToCli(int userState)
         {
             IsTurnActive = false;
-            OpenCards = new MessageCard[0];
+            OpenCards = (!Table.Instance.gameStart)
+                ? Array.Empty<MessageCard>()
+                : Table.Instance.getMessageCards();
             UserState = userState;
-            RemainingCardCounts = new MessageCardCount[0];
+            RemainingCardCounts = Table.Instance.gameStart ? Table.Instance.GetAllPlayerCardCounts() : Array.Empty<MessageCardCount>();
         }
         public MessageServerToCli(int playerId, string playerName, int userState)
         {
             PlayerId = playerId;
             PlayerName = playerName;
             IsTurnActive = false;
-            OpenCards = new MessageCard[0];
+            OpenCards = (!Table.Instance.gameStart)
+                ? Array.Empty<MessageCard>()
+                : Table.Instance.getMessageCards();
             UserState = userState;
-            RemainingCardCounts = new MessageCardCount[0];
+            RemainingCardCounts = Table.Instance.gameStart ? Table.Instance.GetAllPlayerCardCounts() : Array.Empty<MessageCardCount>();
 
-            
+
         }
-        public MessageServerToCli(int playerId, string playerName, bool turn, MessageCard[] openCards, int userState, MessageCardCount[] remainingCounts)
+        public MessageServerToCli(int playerId, string playerName, bool turn,int userState)
         {
             PlayerId = playerId;
             PlayerName = playerName;
             IsTurnActive = turn;
             //Card = card;
-            OpenCards = openCards;
+            OpenCards = (!Table.Instance.gameStart || userState == 1 || userState == 2)
+                ? Array.Empty<MessageCard>()
+                : Table.Instance.getMessageCards();
             UserState = userState;
-            RemainingCardCounts = remainingCounts;
+            RemainingCardCounts = Table.Instance.gameStart ? Table.Instance.GetAllPlayerCardCounts() : Array.Empty<MessageCardCount>();
         }
     }
 

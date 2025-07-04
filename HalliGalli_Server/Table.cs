@@ -34,7 +34,7 @@ namespace HalliGalli_Server
             fruitCardCount["수박"] = 0;
 
             tableDeck = new Queue<Card>();
-            //bell = new Bell();
+            bell = new Bell();
             players = new Dictionary<string, Player>();
             openedCards = new List<Card>();
             currentTurnPlayerId = 0;
@@ -89,17 +89,13 @@ namespace HalliGalli_Server
             }
             tableDeck.Clear();
             currentTurnPlayerId = 0;
+            string currentPlayerName = playerOrder[currentTurnPlayerId];
+            Player currentPlayer = players[currentPlayerName];
             gameStart = true;
-            foreach(var kvp in players)
-            {
-                PlayCard(kvp.Value.username);
-                foreach(var card in openedCards)
-                {
-                    Console.WriteLine(card.fruitType + " "+card.count);
-                }
-            }
-            
+            PlayCard(currentPlayer.username);
+
         }
+
         public void AddPlayer(Player player)
         {
             string playerName = player.username;
@@ -134,9 +130,13 @@ namespace HalliGalli_Server
 
             // 2. 카드 한 장 뽑기
             Card card = player.cardDeck.DrawCard();
-            player.frontCard = card;
             if (card == null)
-                throw new InvalidOperationException("플레이어의 카드가 모두 소진되었습니다.");
+            {
+                return;
+                //throw new InvalidOperationException("낼 카드가 없음");
+            }
+            player.frontCard = card;
+
 
             // 3. 테이블 덱에 카드 올리기
             tableDeck.Enqueue(card);
@@ -145,18 +145,19 @@ namespace HalliGalli_Server
             openedCards.Add(card);
             MoveTurn();
             ShowCurrentResult(player, card); // 현재 결과를 클라에 뿌려주기
-
+            CheckWinner();
             // 5. 과일별 카드 개수 업데이트 
 
             if (fruitCardCount.ContainsKey(card.fruitType))
                 fruitCardCount[card.fruitType] += card.count;
             else
                 fruitCardCount[card.fruitType] = card.count;
+
         }
 
         public void ShowCurrentResult(Player player, Card currentCard)
         {
-            Card[] cards;
+            Card?[] cards;
             // Todo: 테이블에 나와있는 N(플레이어 수)개의 카드 배열을 반환
             int playerCount = playerOrder.Count;
             //아직 모든 플레이어가 카드를 내지 않았을때. 낸사람만 표시
@@ -171,17 +172,23 @@ namespace HalliGalli_Server
             }
 
             // 브로드캐스팅int playerId, string playerName, Card card, int userState, Card[] openCards
+            MessageCard[] messageCards = getMessageCards();
+            Broadcaster.Instance.BroadcastNextTurn(messageCards, currentTurnPlayerId);
+
+        }
+
+        public MessageCard[] getMessageCards()
+        {
             MessageCard[] messageCards = new MessageCard[players.Count];
             int idx = 0;
-            foreach(var kvp in players)
+            foreach (var kvp in players)
             {
                 Player ply = kvp.Value;
                 messageCards[idx++] = new MessageCard(ply.playerId, ply.frontCard.getNum());
             }
-
-            Broadcaster.Instance.BroadcastNextTurn(messageCards, currentTurnPlayerId);
-
+            return messageCards;
         }
+
         public void MergeDeck(string playerName)
         {
             // 1. 플레이어 찾기
@@ -251,6 +258,8 @@ namespace HalliGalli_Server
             foreach (var otherEntry in players)
             {
                 if (otherEntry.Key == playerName) continue; // 자기 자신은 건너뛰기
+                if (!otherEntry.Value.isAlive) continue; // 죽으면 카드 주지말기
+
                 Player other = otherEntry.Value;
 
                 Card card = penaltyPlayer.cardDeck.DrawCard();
@@ -265,6 +274,7 @@ namespace HalliGalli_Server
 
             // 브로드캐스트 패널티유저
             Broadcaster.Instance.BroadcastToAll(new MessageServerToCli(player.playerId, player.username, 3)); // 3-> 패널티
+            CheckWinner();
 
         }
 
@@ -273,13 +283,16 @@ namespace HalliGalli_Server
             Player player = players[playerName];
 
             // 해당 플레이어를 죽은 상태로 바꿈
+            player.isAlive = false;
+
+
             if (!players.ContainsKey(playerName))
                 throw new InvalidOperationException("해당 플레이어가 존재하지 않습니다.");
 
             players[playerName].isAlive = false;
 
             // 브로드캐스트 유저사망
-            Broadcaster.Instance.BroadcastToAll(new MessageServerToCli(player.playerId, player.username, 8)); // 8-> 사망
+            Broadcaster.Instance.BroadcastToAll(new MessageServerToCli(player.playerId, player.username, 9)); // 9-> 사망
         }
 
 
@@ -294,7 +307,7 @@ namespace HalliGalli_Server
                 Player winner = alivePlayers[0];
 
                 // BroadcastWinner(winnerId); // (선택)
-                Broadcaster.Instance.BroadcastToAll(new MessageServerToCli(winner.playerId, winner.username, 7)); //7 -> 우승
+                Broadcaster.Instance.BroadcastToAll(new MessageServerToCli(winner.playerId, winner.username, 8)); //8-> 우승
 
                 // EndGame(); // (선택)
                 return ;
@@ -307,7 +320,7 @@ namespace HalliGalli_Server
                 {
                     Player winner = players[bellPlayerName];
                     // BroadcastWinner(winnerId); // (선택)
-                    Broadcaster.Instance.BroadcastToAll(new MessageServerToCli(winner.playerId, winner.username, 7)); //7 -> 우승
+                    Broadcaster.Instance.BroadcastToAll(new MessageServerToCli(winner.playerId, winner.username, 8)); //8 -> 우승
                     
                     // EndGame(); // (선택)
                     return ;

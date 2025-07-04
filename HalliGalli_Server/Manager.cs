@@ -130,7 +130,7 @@ namespace HalliGalli_Server
             catch (IOException)
             {
                 Console.WriteLine($"{player.playerId} 연결 종료");
-                Broadcaster.Instance.BroadcastToAll(new MessageServerToCli(player.playerId, player.username, 5)); // 5 -> 퇴장
+                Broadcaster.Instance.BroadcastToAll(new MessageServerToCli(player.playerId, player.username, 9)); // 9 -> 퇴장
                 RemoveUser(player);
             }
             catch (Exception e)
@@ -138,9 +138,12 @@ namespace HalliGalli_Server
                 if(e.Message=="이름 중복")
                 {
                     Broadcaster.Instance.BroadcastToAll(new MessageServerToCli(6)); // 6 -> 이름 중복
+                }else if (e.Message == "낼 카드가 없음")
+                {
+                    
                 } else
                 {
-                    Console.WriteLine("유저 연결: 예상치 못한 오류"+e.Message);
+                    Console.WriteLine("유저 연결: 예상치 못한 오류" + e.Message);
                 }
             }
 

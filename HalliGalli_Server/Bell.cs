@@ -28,7 +28,7 @@ namespace HalliGalli_Server
     // 종 클래스
     public class Bell
     {
-        public bool isActive = false; // 과일 5개가 모였을 때 활성화
+        //public bool isActive = false; // 과일 5개가 모였을 때 활성화
                                       // 활성화가 되지 않으면 패널티
                                       // 활성화가 되어있으면 버퍼에 정보저장 후 승리자 판별
 
@@ -45,11 +45,7 @@ namespace HalliGalli_Server
 
         public void Ring(string playerName, int timeDif)
         {
-            if (!isActive)
-            {
-                Table.Instance.ApplyPenalty(playerName);
-                return;
-            }
+
             if (!isDeciding)
             {
                 isDeciding = true;
@@ -61,30 +57,28 @@ namespace HalliGalli_Server
         public void StartDecision()
         {
 
-            Thread.Sleep(2000);
+            Thread.Sleep(3500);
             string winner = DecideWinner();
             if (winner == "없음")
             {
                 Broadcaster.Instance.BroadcastToAll(new MessageServerToCli(9)); // 9 -> 우승자없음
             }
-            // Todo: 브로드캐스팅 (...번 우승)
-            Table.Instance.MergeDeck(winner);
 
             // 쓰레드 종료
             TimeDifList.Clear();
+            foreach(var kvs in Table.Instance.players)
+            {
+                Player ply = kvs.Value;
+                ply.frontCard = new Card();
+            }
             isDeciding = false;
-            isActive = false;
+
+            //Todo: 테이블 지움
+            Broadcaster.Instance.BroadcastWinner(winner);
+            Table.Instance.MergeDeck(winner);
+            Table.Instance.CheckWinner(winner);
+
             return;
-        }
-
-        public void Activate()
-        {
-            isActive = true;
-        }
-
-        public void Deactivate()
-        {
-            isActive = false;
         }
 
         public string DecideWinner()
