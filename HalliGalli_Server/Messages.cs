@@ -34,39 +34,31 @@ namespace HalliGalli_Server
 
         public MessageServerToCli() { }
 
-        public MessageServerToCli(int userState, MessageCard[] OpenCards, MessageCardCount[] messageCardCounts)
+        public MessageServerToCli(int userState, MessageCard[] openCards, MessageCardCount[] messageCardCounts)
         {
             IsTurnActive = false;
-            OpenCards = (!Table.Instance.gameStart)
-                ? Array.Empty<MessageCard>()
-                : Table.Instance.getMessageCards();
+            OpenCards = openCards;
             UserState = userState;
-            RemainingCardCounts = Table.Instance.gameStart ? Table.Instance.GetAllPlayerCardCounts() : Array.Empty<MessageCardCount>();
+            RemainingCardCounts = messageCardCounts;
         }
-        public MessageServerToCli(int playerId, string playerName, int userState, MessageCard[] OpenCards, MessageCardCount[] messageCardCounts)
+        public MessageServerToCli(int playerId, string playerName, int userState, MessageCard[] openCards, MessageCardCount[] messageCardCounts)
         {
             PlayerId = playerId;
             PlayerName = playerName;
             IsTurnActive = false;
-            OpenCards = (!Table.Instance.gameStart)
-                ? Array.Empty<MessageCard>()
-                : Table.Instance.getMessageCards();
+            OpenCards = openCards;
             UserState = userState;
-            RemainingCardCounts = Table.Instance.gameStart ? Table.Instance.GetAllPlayerCardCounts() : Array.Empty<MessageCardCount>();
-
+            RemainingCardCounts = messageCardCounts;
 
         }
-        public MessageServerToCli(int playerId, string playerName, bool turn,int userState, MessageCard[] OpenCards, MessageCardCount[] messageCardCounts)
+        public MessageServerToCli(int playerId, string playerName, bool turn,int userState, MessageCard[] openCards, MessageCardCount[] messageCardCounts)
         {
             PlayerId = playerId;
             PlayerName = playerName;
             IsTurnActive = turn;
-            //Card = card;
-            OpenCards = (!Table.Instance.gameStart || userState == 1 || userState == 2)
-                ? Array.Empty<MessageCard>()
-                : Table.Instance.getMessageCards();
+            OpenCards = openCards;
             UserState = userState;
-            RemainingCardCounts = Table.Instance.gameStart ? Table.Instance.GetAllPlayerCardCounts() : Array.Empty<MessageCardCount>();
+            RemainingCardCounts = messageCardCounts;
         }
     }
 

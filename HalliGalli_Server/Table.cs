@@ -184,7 +184,7 @@ namespace HalliGalli_Server
 
             // 브로드캐스팅int playerId, string playerName, Card card, int userState, Card[] openCards
             MessageCard[] messageCards = getMessageCards();
-            Broadcaster.Instance.BroadcastCurrentTurn(messageCards, currentTurnPlayerId);
+            Broadcaster.Instance.BroadcastCurrentTurn(this);
 
         }
 
