@@ -32,15 +32,16 @@ namespace HalliGalli_Server
                                       // 활성화가 되지 않으면 패널티
                                       // 활성화가 되어있으면 버퍼에 정보저장 후 승리자 판별
 
-        public bool isDeciding = false;
+        private bool isDeciding = false;
+        private List<PlayerName_TimeDIf> TimeDifList;
+        private string? winner;
+        private Table table;
+        //private readonly object lockObj = new();
 
-        public List<PlayerName_TimeDIf> TimeDifList;
-
-        private readonly object lockObj = new();
-
-        public Bell()
+        public Bell(Table table)
         {
             this.TimeDifList = new List<PlayerName_TimeDIf>();
+            this.table = table;
         }
 
         public void Ring(string playerName, int timeDif)
@@ -56,35 +57,33 @@ namespace HalliGalli_Server
 
         public void StartDecision()
         {
-
             Thread.Sleep(3500);
-            string winner = DecideWinner();
-            if (winner == "없음")
+            string? winner = DecideWinner();
+            if (winner == null)
             {
-                Broadcaster.Instance.BroadcastToAll(new MessageServerToCli(9)); // 9 -> 우승자없음
+                Broadcaster.Instance.BroadcastToAll(
+                    table.MakeMessageServerToCli(GameEvent.GAME_LOSE), table.GetPlayers()); // 9 -> 우승자없음
+                return;
             }
 
             // 쓰레드 종료
             TimeDifList.Clear();
-            foreach(var kvs in Table.Instance.players)
-            {
-                Player ply = kvs.Value;
-                ply.frontCard = new Card();
-            }
             isDeciding = false;
 
+
             //Todo: 테이블 지움
-            Broadcaster.Instance.BroadcastWinner(winner);
-            Table.Instance.MergeDeck(winner);
-            Table.Instance.CheckWinner(winner);
+            Broadcaster.Instance.BroadcastWinner(winner, table);
+
+            table.MergeDeck(winner);
+            table.CheckWinner(winner);
 
             return;
         }
 
-        public string DecideWinner()
+        public string? DecideWinner()
         {
             int MinDif = int.MaxValue;
-            string CurWinner = "없음";
+            string? CurWinner = null;
 
             foreach(PlayerName_TimeDIf pt in TimeDifList)
             {

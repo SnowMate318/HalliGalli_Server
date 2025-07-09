@@ -26,7 +26,7 @@ namespace HalliGalli_Server
         TcpListener server;
         bool gamestart = false;
 
-        bool[] idBox = {false,false,false,false};
+        bool[] idBox = { false, false, false, false };
 
         private Manager()
         {
@@ -51,6 +51,7 @@ namespace HalliGalli_Server
         {
             while (true)
             {
+                Table table = new Table(); // 게임 시작에 필요한 테이블
 
                 TcpClient client = server.AcceptTcpClient();
                 if (client != null && CheckUserAvailable())
@@ -60,57 +61,58 @@ namespace HalliGalli_Server
                     {
                         currentThreadCount++;
                     }
-                    ClientThread.Start(client);
+                    ClientThread.Start((client, table));
 
                 }
             }
         }
         public void UserTCPStart(object obj) // 유저 추가시 
         {
-            TcpClient Client = (TcpClient)obj;
-            NetworkStream stream = Client.GetStream();
+            var (client, table) = ((TcpClient, Table))obj;
+            NetworkStream stream = client.GetStream();
 
             int playerId = getPlayerId();
 
-            Player player = new Player(playerId, stream, Client); 
-            //MessageCliToServer msg = player.ReceiveJson<MessageCliToServer>();
-            MessageCliToServer msg = player.ReceiveJson<MessageCliToServer>();
-            if (msg == null)
-            {
-                Console.WriteLine("초기 메시지 수신 실패, 연결 종료");
-                return; 
-            }
+            Player player = new Player(playerId, stream, client);
+            MessageCliToServer msg = Receiver.Instance.ReceiveJson<MessageCliToServer>(player.streamManager.reader);
+
             try
             {
-                //Console.WriteLine("msg.id: "+msg.id+"msg.name:"+msg.name+"msg.key:"+msg.key);
+                if (msg == null)
+                    throw new Exception("연결 실패");
+
                 if (string.IsNullOrWhiteSpace(msg.name))
                     throw new Exception("이름이 비어 있습니다.");
 
-                if (Table.Instance.players.ContainsKey(msg.name))
+                if (table.players.ContainsKey(msg.name))
                     throw new Exception("이름 중복");
-                player.username = msg.name;
 
-                Table.Instance.AddPlayer(player); // 수정
-                MessageServerToCli callBack = new MessageServerToCli(
-                    player.playerId,
-                    player.username,
-                    4
-                 );
+                player.Name = msg.name;
+
+                table.AddPlayer(player); // 수정
+
+                MessageServerToCli callBack = table.MakeMessageServerToCli(
+                        playerId,
+                        player.Name,
+                        GameEvent.ENTER
+                    );
+
                 Console.WriteLine(callBack.ToString());
 
-                Broadcaster.Instance.BroadcastToAll(callBack);
-                Broadcaster.Instance.BroadcastEnternece(player);
+                Broadcaster.Instance.BroadcastToAll(callBack, table.players.Values.ToList());
+                Broadcaster.Instance.BroadcastEnternece(player,table);
 
                 while (true)
                 {
 
-                    msg = player.ReceiveJson<MessageCliToServer>();
-                    if (msg != null) {
+                    msg = Receiver.Instance.ReceiveJson<MessageCliToServer>(player.streamManager.reader);
+                    if (msg != null)
+                    {
 
-                        if(!gamestart && msg.key == 3) // p->3
+                        if (!gamestart && msg.key == 3) // p->3
                         {
                             gamestart = true;
-                            Table.Instance.StartGame();
+                            table.StartGame();
                             continue;
                         }
 
@@ -119,29 +121,24 @@ namespace HalliGalli_Server
                                                     // 상태 기준 판단
                                                     // 상대가 누른 키를 기준으로 판단
 
-
-                        // 테스트(쓰레기값 주기)
-                        // Broadcaster.Instance.BroadcastToAll(new MessageServerToCli());
                     }
-
-
                 }
             }
-            catch (IOException)
+            catch (IOException) // 플레이어와 연결이 끊겼을때
             {
-                Console.WriteLine($"{player.playerId} 연결 종료");
-                Broadcaster.Instance.BroadcastToAll(new MessageServerToCli(player.playerId, player.username, 9)); // 9 -> 퇴장
-                RemoveUser(player);
+                Console.WriteLine($"{player.Id} 연결 종료");
+                RemoveUser(player,table);
+                Broadcaster.Instance.BroadcastToAll(table.MakeMessageServerToCli(
+                    player.Id, player.Name, GameEvent.GAME_LOSE), table.players.Values.ToList()); // 9 -> 퇴장
             }
             catch (Exception e)
             {
-                if(e.Message=="이름 중복")
+                if (e.Message == "이름 중복" || e.Message == "이름이 비어 있습니다.")
                 {
-                    Broadcaster.Instance.BroadcastToAll(new MessageServerToCli(6)); // 6 -> 이름 중복
-                }else if (e.Message == "낼 카드가 없음")
-                {
-                    
-                } else
+                    Broadcaster.Instance.BroadcastToAll(
+                        table.MakeMessageServerToCli(GameEvent.DUP_NAME), table.players.Values.ToList()); // 6 -> 이름 중복
+                }
+                else
                 {
                     Console.WriteLine("유저 연결: 예상치 못한 오류" + e.Message);
                 }
@@ -156,19 +153,18 @@ namespace HalliGalli_Server
             }
 
         }
-        public void RemoveUser(Player player)
+        public void RemoveUser(Player player, Table table)
         {
 
             lock (threadLock)
             {
-                idBox[player.playerId] = false;
+                idBox[player.Id] = false;
                 currentThreadCount--;
             }
 
-            Table.Instance.PlayerDeath(player.username);
-            Table.Instance.players.Remove(player.username);
-            player.stream.Close();
-            player.tcpClient.Close();
+            table.PlayerDeath(player.Name);
+            table.players.Remove(player.Name);
+            player.streamManager.Dispose();
         }
 
         private int getPlayerId()
@@ -189,6 +185,6 @@ namespace HalliGalli_Server
             return playerid;
         }
 
-        
+
     }
 }

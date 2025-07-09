@@ -29,7 +29,7 @@ namespace HalliGalli_Server
             //Todo: 자신의 덱에 카드를 추가함  
             if (card != null) deck.Enqueue(card);
         }
-        public int GetCardCount()
+        public int Size()
         {
             //Todo: 저장된 카드 갯수를 호출  
             return deck.Count;

@@ -17,45 +17,15 @@ namespace HalliGalli_Server
     {
         public static Broadcaster Instance { get; } = new Broadcaster();
 
-        //public void SendJson<T>(T obj, NetworkStream stream)
-        //{
-        //    var options = new JsonSerializerOptions
-        //    {
-        //        IncludeFields = true, //  필드 포함
-        //        PropertyNamingPolicy = JsonNamingPolicy.CamelCase, // JSON 네이밍 정책
-        //        DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.Never,
-        //        WriteIndented = true
-        //    };
-
-        //    string json = JsonSerializer.Serialize(obj, options);
-        //    byte[] data = Encoding.UTF8.GetBytes(json);
-        //    byte[] dataLength = BitConverter.GetBytes(data.Length);
-
-        //    stream.Write(dataLength, 0, 4);
-        //    stream.Write(data, 0, data.Length);
-        //    stream.Flush();
-
-        //    Console.WriteLine("보낸 JSON:\n" + json);
-        //}
-
-        public void SendJson<T>(T obj, NetworkStream stream, string name)
+        public void SendJson<T>(T obj, StreamWriter writer, string name)
         {
-            if (stream == null || !stream.CanWrite)
-            {
-                Console.WriteLine("스트림이 null이거나 쓰기 불가능");
-                return;
-            }
-
             string json = JsonSerializer.Serialize(obj);
             try
             {
-                using (StreamWriter writer = new StreamWriter(stream, leaveOpen: true))
-                {
-                    writer.WriteLine(json);
-                    writer.Flush();
-                    Console.WriteLine(name+"에게 보낸 JSON: " + json);
-                    Thread.Sleep(30);
-                }
+                writer.WriteLine(json);
+                writer.Flush();
+                Console.WriteLine(name + "에게 보낸 JSON: " + json);
+                Thread.Sleep(30);
             }
             catch (Exception e)
             {
@@ -64,92 +34,96 @@ namespace HalliGalli_Server
         }
 
         // 수정된 BroadcastToAll 메서드
-        public void BroadcastToAll(MessageServerToCli message)
+        public void BroadcastToAll(MessageServerToCli message, List<Player> players)
         {
 
-            foreach (var kvp in Table.Instance.players)
+            foreach (Player player in players)
             {
-                Player player = kvp.Value; // KeyValuePair에서 Player 객체를 가져옴
-                SendJson(message, player.stream, player.username);
+                SendJson(message, player.streamManager.writer, player.Name);
             }
         }
-        public void BroadcastWinner(string winnerName)
+        public void BroadcastWinner(string winnerName, Table table)
         {
-            foreach (var kvp in Table.Instance.players)
+            foreach (Player player in table.players.Values.ToList())
             {
-                Player player = kvp.Value; // KeyValuePair에서 Player 객체를 가져옴
+                GameEvent gameEvnet = GameEvent.WIN; // 승리자일 경우
+                if (!player.Name.Equals(winnerName))
+                {
+                    gameEvnet = GameEvent.LOSE; // 패배자일 경우
+                }
 
-                if (player.playerId == null) return;
-                int userState = 0;
-                if (player.username.Equals(winnerName))
-                {
-                    userState = 1;
-                }
-                else
-                {
-                    userState = 2;
-                    // Handle other cases if necessary
-                }
-                // Explicitly cast 'int?' to 'int' after checking for null
-                MessageServerToCli msg = new MessageServerToCli(
-                    player.playerId, // Fix: Use .Value to access the underlying int
-                    player.username,
-                    (player.playerId==Table.Instance.currentTurnPlayerId),
-                    userState
+               
+                MessageServerToCli message = table.MakeMessageServerToCli(
+                    player.Id, 
+                    player.Name,
+                    (player.Id==table.currentTurnPlayerId),
+                    gameEvnet
                 );
 
-                
-                SendJson(msg, player.stream, player.username);
+                SendJson(message, player.streamManager.writer, player.Name);
             }
         }
 
         // 처음 입장했을 때 이미 참여한 사람들 정보를 뿌림
-        public void BroadcastEnternece(Player target)
+        public void BroadcastEnternece(Player target, Table table)
         {
-            Console.WriteLine("타겟 플레이어: "+target.username);
-            foreach (var kvp in Table.Instance.players)
+            Console.WriteLine("타겟 플레이어: "+target.Name);
+            foreach (Player player in table.GetPlayers())
             {
-                Player player = kvp.Value; // KeyValuePair에서 Player 객체를 가져옴
-                MessageServerToCli message = new MessageServerToCli(
-                        player.playerId,
-                        player.username,
-                        4
+
+                MessageServerToCli message = table.MakeMessageServerToCli(
+                        player.Id,
+                        player.Name,
+                        GameEvent.ENTER
                     );
                 
-                SendJson(message, target.stream, target.username);
+                SendJson(message, target.streamManager.writer, target.Name);
                 Thread.Sleep(500);
             }
             Console.WriteLine("---끝---");
         }
 
 
-        public void BroadcastNextTurn(MessageCard[] messageCards, int currentTurnPlayerId)
+        public void BroadcastCurrentTurn(Table table)
         {
-            foreach (var kvp in Table.Instance.players)
+            foreach (Player player in table.GetPlayers())
             {
-                Player player = kvp.Value; // KeyValuePair에서 Player 객체를 가져옴
+                
+                MessageServerToCli msg = table.MakeMessageServerToCli(
 
-                MessageServerToCli msg = new MessageServerToCli
-                {
-                    PlayerId = player.playerId,
-                    PlayerName = player.username,
-                    IsTurnActive = (player.playerId == currentTurnPlayerId),
-                    OpenCards = messageCards,
-                    UserState = 0,
-                    RemainingCardCounts = Table.Instance.GetAllPlayerCardCounts()
-                };
+                        player.Id,
+                        player.Name,
+                        (player.Id == table.currentTurnPlayerId),
+                        GameEvent.None
 
-                if (player.playerId == currentTurnPlayerId)
-                {
-                    msg.IsTurnActive = true;
-                }
-                else
-                {
-                    msg.IsTurnActive = false;
-                }
+                    );
 
-                SendJson(msg, player.stream, player.username);
+                SendJson(msg, player.streamManager.writer, player.Name);
             }
         }
+
+
+
     }
 }
+
+//public void SendJson<T>(T obj, NetworkStream stream)
+//{
+//    var options = new JsonSerializerOptions
+//    {
+//        IncludeFields = true, //  필드 포함
+//        PropertyNamingPolicy = JsonNamingPolicy.CamelCase, // JSON 네이밍 정책
+//        DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.Never,
+//        WriteIndented = true
+//    };
+
+//    string json = JsonSerializer.Serialize(obj, options);
+//    byte[] data = Encoding.UTF8.GetBytes(json);
+//    byte[] dataLength = BitConverter.GetBytes(data.Length);
+
+//    stream.Write(dataLength, 0, 4);
+//    stream.Write(data, 0, data.Length);
+//    stream.Flush();
+
+//    Console.WriteLine("보낸 JSON:\n" + json);
+//}

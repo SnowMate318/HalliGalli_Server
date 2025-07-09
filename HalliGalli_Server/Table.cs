@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Numerics;
+using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -11,20 +13,23 @@ namespace HalliGalli_Server
     public class Table
     {
 
-        public static Table Instance { get; } = new Table(); // 1) 유일한 인스턴스를 저장할 정적 필드
+        //public static Table Instance { get; } = new Table(); // 1) 유일한 인스턴스를 저장할 정적 필드
 
         public Dictionary<string, Player> players; //string은 플레이어 이름, Player는 플레이어 객체
-        public List<Card> openedCards;
+
         public Dictionary<string, int> fruitCardCount;
         public Queue<Card> tableDeck;
+        
         public int currentTurnPlayerId;
         public Bell bell;
+
+
         public bool gameStart = false; // 인원을 더 받을지 트리거로 사용
-        public List<string> playerOrder = new List<string>(); // 플레이어 순서 저장용
-                                                              //새로 생성된 부분 - 태현 확인해 이부분
+        public List<string> playerOrder; // 플레이어 순서 저장용
+        public Card[] openedCards;
 
 
-        private Table()
+        public Table()
         {
             fruitCardCount = new Dictionary<string, int>();//사과 바나나 포도 수박 과일 별 카드 수 딕셔너리 생성
 
@@ -34,9 +39,11 @@ namespace HalliGalli_Server
             fruitCardCount["수박"] = 0;
 
             tableDeck = new Queue<Card>();
-            bell = new Bell();
             players = new Dictionary<string, Player>();
-            openedCards = new List<Card>();
+            playerOrder = new List<string>();
+            openedCards = new Card[4];
+
+            bell = new Bell(this);
             currentTurnPlayerId = 0;
         }
         public void StartGame()
@@ -81,8 +88,6 @@ namespace HalliGalli_Server
             }
 
 
-            // 게임 상태 초기화
-            openedCards.Clear();
             foreach (string fruit in fruits)
             {
                 fruitCardCount[fruit] = 0;
@@ -92,108 +97,132 @@ namespace HalliGalli_Server
             string currentPlayerName = playerOrder[currentTurnPlayerId];
             Player currentPlayer = players[currentPlayerName];
             gameStart = true;
-            PlayCard(currentPlayer.username);
+            PlayCard(currentPlayer.Name);
 
         }
 
         public void AddPlayer(Player player)
         {
-            string playerName = player.username;
+            string playerName = player.Name;
             players.Add(playerName, player);
             playerOrder.Add(playerName); // 플레이어 순서 리스트에도 추가!
-        }
 
-        public MessageCardCount[] GetAllPlayerCardCounts()
-        {
-            int size = players.Count;
-            MessageCardCount[] res = new MessageCardCount[size]; // Fixed array declaration and initialization
-
-            int index = 0;
-            foreach (var player in players.Values)
-            {
-                res[index++] = new MessageCardCount(player.playerId, player.cardDeck.deck.Count);
-            }
-
-            return res;
         }
 
 
         public void PlayCard(string playerName)
         {
             // 1. 플레이어 찾기 (이름으로 바로 접근)
-            if (!players.ContainsKey(playerName))
-                throw new InvalidOperationException("해당 플레이어가 존재하지 않습니다.");
+            Player? player = GetPlayer(playerName);
 
-            Player player = players[playerName];
-            if (!player.isAlive)
-                throw new InvalidOperationException("해당 플레이어는 이미 탈락했습니다.");
+            if (player == null) // 플레이어가 죽거나 나갔을 경우
+            {
+                MoveTurn();
+                ShowCurrentResult(); // 현재 결과를 클라에 뿌려주기
+                return;
+            }
+
+            if (player.cardDeck.Size() == 0)
+            {
+                PlayerDeath(playerName); // 죽음 처리
+                MoveTurn();
+                ShowCurrentResult(); // 현재 결과를 클라에 뿌려주기
+                return ;
+            }
 
             // 2. 카드 한 장 뽑기
             Card card = player.cardDeck.DrawCard();
-            if (card == null)
-            {
-                return;
-                //throw new InvalidOperationException("낼 카드가 없음");
-            }
-            player.frontCard = card;
-
 
             // 3. 테이블 덱에 카드 올리기
-            tableDeck.Enqueue(card);
-
             // 4. 펼쳐진 카드 목록에 추가
-            openedCards.Add(card);
-            MoveTurn();
-            ShowCurrentResult(player, card); // 현재 결과를 클라에 뿌려주기
-            CheckWinner();
             // 5. 과일별 카드 개수 업데이트 
+            UpdateCardTable(player, card);
+            MoveTurn(); // 턴 바꾸고 그 결과를 클라이언트에 뿌려줌?
+            ShowCurrentResult(); // 현재 결과를 클라에 뿌려주기
+            CheckWinner();
 
+        }
+
+        public Player? GetPlayer(string playerName)
+        {
+            
+            if (!players.ContainsKey(playerName))
+            {
+                // 해당 플레이어 존재하지 않음
+                Debug.WriteLine("플레이어 존재하지 않음: 턴 이동");
+                return null;
+            }
+
+            Player player = players[playerName];
+            if (!player.isAlive)
+            {
+                //이미 탈락한 플레이어
+                Debug.WriteLine("플레이어 죽음: 턴 이동");
+                return null;
+            }
+
+            return player;
+        }
+
+        // 테이블에있는 카드정보 업데이트
+        public void UpdateCardTable(Player player, Card card)
+        {
+            
+            tableDeck.Enqueue(card);
+            
+            openedCards[player.Id] = card;
+
+            
             if (fruitCardCount.ContainsKey(card.fruitType))
                 fruitCardCount[card.fruitType] += card.count;
             else
                 fruitCardCount[card.fruitType] = card.count;
-
         }
 
-        public void ShowCurrentResult(Player player, Card currentCard)
+        public void ShowCurrentResult()
         {
-            Card?[] cards;
-            // Todo: 테이블에 나와있는 N(플레이어 수)개의 카드 배열을 반환
-            int playerCount = playerOrder.Count;
-            //아직 모든 플레이어가 카드를 내지 않았을때. 낸사람만 표시
-            if (openedCards.Count < players.Count)
-            {
-                cards = openedCards.ToArray();
-            }
-            else
-            {
-                //마지막 N장(플레이어 수만큼 반환)
-                cards = openedCards.Skip(openedCards.Count - playerCount).ToArray();
-            }
 
             // 브로드캐스팅int playerId, string playerName, Card card, int userState, Card[] openCards
             MessageCard[] messageCards = getMessageCards();
-            Broadcaster.Instance.BroadcastNextTurn(messageCards, currentTurnPlayerId);
+            Broadcaster.Instance.BroadcastCurrentTurn(messageCards, currentTurnPlayerId);
 
         }
 
         public MessageCard[] getMessageCards()
         {
             MessageCard[] messageCards = new MessageCard[players.Count];
-            int idx = 0;
-            foreach (var kvp in players)
+            foreach (Player player in GetPlayers())
             {
-                Player ply = kvp.Value;
-                messageCards[idx++] = new MessageCard(ply.playerId, ply.frontCard.getNum());
+                messageCards[player.Id] = new MessageCard(player.Id, openedCards[player.Id].getNum());
             }
             return messageCards;
         }
+
+
+        public MessageCardCount[] GetAllPlayerCardCounts()
+        {
+            int size = players.Count;
+            MessageCardCount[] res = new MessageCardCount[size]; 
+
+            int index = 0;
+            foreach (var player in players.Values)
+            {
+                res[index++] = new MessageCardCount(player.Id, player.cardDeck.deck.Count);
+            }
+
+            return res;
+        }
+
 
         public void MergeDeck(string playerName)
         {
             // 1. 플레이어 찾기
             if (!players.ContainsKey(playerName))
-                throw new InvalidOperationException("해당 플레이어가 존재하지 않습니다.");
+            {
+                Debug.WriteLine("카드를 합칠 사용자가 없습니다.");
+                return;
+            }
+                
 
             Player player = players[playerName];
 
@@ -205,7 +234,10 @@ namespace HalliGalli_Server
             }
 
             // 3. 펼쳐진 카드 목록 초기화
-            openedCards.Clear();
+            foreach(Card card in openedCards)
+            {
+                card.ClearCard();
+            }
 
             // 4. 과일별 카드 개수 초기화
             foreach (var key in fruitCardCount.Keys.ToList())
@@ -216,9 +248,6 @@ namespace HalliGalli_Server
 
         public void MoveTurn()
         {
-            // Todo: 카드를 내거나 플레이어가 5초이상 카드를 보여주지 않았을 때 호출
-            // 턴 진행중인 유저 id 정보를 업데이트
-
 
             int playerCount = players.Count;
             if (playerCount == 0)
@@ -273,7 +302,8 @@ namespace HalliGalli_Server
             }
 
             // 브로드캐스트 패널티유저
-            Broadcaster.Instance.BroadcastToAll(new MessageServerToCli(player.playerId, player.username, 3)); // 3-> 패널티
+            Broadcaster.Instance.BroadcastToAll(
+                           MakeMessageServerToCli(player.Id, player.Name, GameEvent.PENALTY), GetPlayers()); //패널티
             CheckWinner();
 
         }
@@ -292,7 +322,8 @@ namespace HalliGalli_Server
             players[playerName].isAlive = false;
 
             // 브로드캐스트 유저사망
-            Broadcaster.Instance.BroadcastToAll(new MessageServerToCli(player.playerId, player.username, 9)); // 9-> 사망
+            Broadcaster.Instance.BroadcastToAll(
+                           MakeMessageServerToCli(player.Id, player.Name, GameEvent.GAME_LOSE), GetPlayers()); //우승
         }
 
 
@@ -300,17 +331,12 @@ namespace HalliGalli_Server
         {
             // 살아있는 플레이어만 추출
             var alivePlayers = players.Values.Where(p => p.isAlive).ToList();
-
+            Player? winner = null;
             // 1명 남았으면 그 사람이 우승
+
             if (alivePlayers.Count == 1)
             {
-                Player winner = alivePlayers[0];
-
-                // BroadcastWinner(winnerId); // (선택)
-                Broadcaster.Instance.BroadcastToAll(new MessageServerToCli(winner.playerId, winner.username, 8)); //8-> 우승
-
-                // EndGame(); // (선택)
-                return ;
+                winner = alivePlayers[0];
             }
 
             // 2명 남았고, bellPlayerName(종 친 사람)이 있으면 그 사람이 우승
@@ -318,16 +344,59 @@ namespace HalliGalli_Server
             {
                 if (players.ContainsKey(bellPlayerName) && players[bellPlayerName].isAlive)
                 {
-                    Player winner = players[bellPlayerName];
-                    // BroadcastWinner(winnerId); // (선택)
-                    Broadcaster.Instance.BroadcastToAll(new MessageServerToCli(winner.playerId, winner.username, 8)); //8 -> 우승
-                    
-                    // EndGame(); // (선택)
-                    return ;
+                    winner = players[bellPlayerName];
+                   
                 }
             }
+
+            if (winner != null) {
+                Broadcaster.Instance.BroadcastToAll(
+                           MakeMessageServerToCli(winner.Id, winner.Name, GameEvent.GAME_WIN), GetPlayers()); //8 -> 우승
+                gameStart = false;
+
+            }
+
+        }
+        public MessageServerToCli MakeMessageServerToCli(int Id, string name, GameEvent gameEvent)
+        {
+            return new MessageServerToCli(
+
+                    Id,
+                    name,
+                    (int)gameEvent,
+                    getMessageCards(),
+                    GetAllPlayerCardCounts()
+
+                );
+        }
+        public MessageServerToCli MakeMessageServerToCli(int Id, string name, bool turn, GameEvent gameEvent)
+        {
+            return new MessageServerToCli(
+
+                    Id,
+                    name,
+                    turn,
+                    (int)gameEvent,
+                    getMessageCards(),
+                    GetAllPlayerCardCounts()
+
+                );
+        }
+        public MessageServerToCli MakeMessageServerToCli(GameEvent gameEvent)
+        {
+            return new MessageServerToCli(
+
+                    (int)gameEvent,
+                    getMessageCards(),
+                    GetAllPlayerCardCounts()
+
+                );
         }
 
+        public List<Player> GetPlayers()
+        {
+            return players.Values.ToList();
+        }
     }
 
 }

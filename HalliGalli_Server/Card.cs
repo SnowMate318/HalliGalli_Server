@@ -48,7 +48,14 @@ namespace HalliGalli_Server
             res += count;
             return res;
         }
-        
+
+        public void ClearCard()
+        {
+            this.fruitType = "없음";
+            this.count = 0;
+        }
 
     }
+
+
 }

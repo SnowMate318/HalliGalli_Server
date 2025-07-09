@@ -34,7 +34,7 @@ namespace HalliGalli_Server
 
         public MessageServerToCli() { }
 
-        public MessageServerToCli(int userState)
+        public MessageServerToCli(int userState, MessageCard[] OpenCards, MessageCardCount[] messageCardCounts)
         {
             IsTurnActive = false;
             OpenCards = (!Table.Instance.gameStart)
@@ -43,7 +43,7 @@ namespace HalliGalli_Server
             UserState = userState;
             RemainingCardCounts = Table.Instance.gameStart ? Table.Instance.GetAllPlayerCardCounts() : Array.Empty<MessageCardCount>();
         }
-        public MessageServerToCli(int playerId, string playerName, int userState)
+        public MessageServerToCli(int playerId, string playerName, int userState, MessageCard[] OpenCards, MessageCardCount[] messageCardCounts)
         {
             PlayerId = playerId;
             PlayerName = playerName;
@@ -56,7 +56,7 @@ namespace HalliGalli_Server
 
 
         }
-        public MessageServerToCli(int playerId, string playerName, bool turn,int userState)
+        public MessageServerToCli(int playerId, string playerName, bool turn,int userState, MessageCard[] OpenCards, MessageCardCount[] messageCardCounts)
         {
             PlayerId = playerId;
             PlayerName = playerName;
